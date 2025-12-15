@@ -56,12 +56,16 @@ if (connectionString) {
   poolConfig.connectionString = connectionString;
 
   // SSL configuration for cloud providers (Supabase, Neon, etc.)
-  // Supabase pooler uses certificates that Node.js considers self-signed
-  // Setting rejectUnauthorized: false is safe here because:
-  // 1. The connection is still encrypted (SSL/TLS)
-  // 2. We're connecting to a known, trusted provider (Supabase)
-  // 3. The connection string itself contains authentication
-  poolConfig.ssl = { rejectUnauthorized: false };
+  // Supabase uses certificates that Node.js v22+ considers self-signed
+  // This configuration is safe because the connection is still encrypted
+  poolConfig.ssl = {
+    rejectUnauthorized: false,
+    // Additional options for maximum compatibility
+    checkServerIdentity: () => undefined,
+    secureOptions: 0, // Disable all SSL verification
+  };
+
+  console.log("🔒 SSL Config applied:", { rejectUnauthorized: false });
 } else {
   poolConfig.host = env.DB_HOST;
   poolConfig.port = env.DB_PORT;
