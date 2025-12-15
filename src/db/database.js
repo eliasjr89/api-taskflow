@@ -2,10 +2,8 @@
 import pg from "pg";
 import { env } from "../config/env.js";
 
-// Fix for Node.js v22+ strict SSL certificate validation
-// This is safe for cloud providers like Supabase that use valid certs
-// but Node.js v22 considers them self-signed
-if (env.NODE_ENV === "development") {
+// Only disable TLS validation in local development, not in Vercel
+if (env.NODE_ENV === "development" && !process.env.VERCEL) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
 
@@ -22,13 +20,15 @@ const poolConfig = {
 
 if (connectionString) {
   poolConfig.connectionString = connectionString;
-  // Cloud providers (Supabase, Neon, etc.) typically require SSL.
-  // Node.js v22+ has stricter SSL requirements, so we need to be more explicit
-  poolConfig.ssl = {
-    rejectUnauthorized: false,
-    // Additional options for Node.js v22+
-    checkServerIdentity: () => undefined,
-  };
+
+  // SSL configuration for cloud providers (Supabase, Neon, etc.)
+  // In production (Vercel), use proper SSL validation
+  // In local development, allow self-signed certificates
+  const isProduction = env.NODE_ENV === "production" || process.env.VERCEL;
+
+  poolConfig.ssl = isProduction
+    ? { rejectUnauthorized: true } // Proper SSL in production
+    : { rejectUnauthorized: false }; // Allow self-signed in development
 } else {
   poolConfig.host = env.DB_HOST;
   poolConfig.port = env.DB_PORT;
