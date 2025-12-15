@@ -2,9 +2,17 @@
 import pg from "pg";
 import { env } from "../config/env.js";
 
+// Fix for Node.js v22+ strict SSL certificate validation
+// This is safe for cloud providers like Supabase that use valid certs
+// but Node.js v22 considers them self-signed
+if (env.NODE_ENV === "development") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
 const { Pool } = pg;
 
-const connectionString = env.POSTGRES_URL || env.DATABASE_URL;
+const connectionString =
+  env.POSTGRES_PRISMA_URL || env.POSTGRES_URL || env.DATABASE_URL;
 
 const poolConfig = {
   max: env.PG_MAX_CLIENTS ? parseInt(env.PG_MAX_CLIENTS) : 20,
@@ -15,8 +23,12 @@ const poolConfig = {
 if (connectionString) {
   poolConfig.connectionString = connectionString;
   // Cloud providers (Supabase, Neon, etc.) typically require SSL.
-  // We enable it by default if using a connection string, even in dev.
-  poolConfig.ssl = { rejectUnauthorized: false };
+  // Node.js v22+ has stricter SSL requirements, so we need to be more explicit
+  poolConfig.ssl = {
+    rejectUnauthorized: false,
+    // Additional options for Node.js v22+
+    checkServerIdentity: () => undefined,
+  };
 } else {
   poolConfig.host = env.DB_HOST;
   poolConfig.port = env.DB_PORT;

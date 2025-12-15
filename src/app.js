@@ -32,17 +32,7 @@ app.get("/ping", (req, res) => res.send("pong"));
 app.use(limiter);
 app.use(hppMiddleware);
 
-/* ───────────── Static files ───────────── */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.use(express.static(path.join(__dirname, "../public")));
-
-app.get("/", (req, res) =>
-  res.sendFile(path.join(__dirname, "../public/index.html"))
-);
-
-/* ───────────── Rutas ───────────── */
+/* ───────────── Rutas API ───────────── */
 app.use("/taskflow/users", usersRoutes);
 app.use("/taskflow/user", userRoutes);
 app.use("/taskflow/projects", projectsRoutes);
@@ -53,6 +43,16 @@ app.use("/taskflow/auth", authRoutes);
 
 // Swagger Docs
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+/* ───────────── Static files (después de las rutas API) ───────────── */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "../public")));
+
+app.get("/", (req, res) =>
+  res.sendFile(path.join(__dirname, "../public/index.html"))
+);
 
 // Handle 404
 app.use((req, res, next) => {

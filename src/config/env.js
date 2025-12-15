@@ -17,6 +17,8 @@ const envSchema = z
     DB_NAME: z.string().optional(),
     DATABASE_URL: z.string().optional(),
     POSTGRES_URL: z.string().optional(),
+    POSTGRES_PRISMA_URL: z.string().optional(),
+    PG_MAX_CLIENTS: z.string().optional(),
     JWT_SECRET: z.string().min(10, "JWT_SECRET must be at least 10 chars long"),
     JWT_EXPIRES_IN: z.string().default("1h"),
   })
@@ -24,10 +26,11 @@ const envSchema = z
     (data) =>
       (data.DB_HOST && data.DB_USER && data.DB_PASSWORD && data.DB_NAME) ||
       data.DATABASE_URL ||
-      data.POSTGRES_URL,
+      data.POSTGRES_URL ||
+      data.POSTGRES_PRISMA_URL,
     {
       message:
-        "Database configuration missing. Provide either (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) or a connection string (DATABASE_URL / POSTGRES_URL).",
+        "Database configuration missing. Provide either (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) or a connection string (POSTGRES_PRISMA_URL / POSTGRES_URL / DATABASE_URL).",
       path: ["DB_HOST"], // Error pointer
     }
   );

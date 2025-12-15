@@ -3,6 +3,8 @@ import {
   getProfile,
   updateProfile,
   uploadUserAvatar,
+  getUserProjects,
+  getUserTasks,
 } from "../controllers/userController.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
@@ -95,5 +97,87 @@ router.post(
   uploadAvatar.single("avatar"),
   uploadUserAvatar
 );
+
+/**
+ * @swagger
+ * /user/projects:
+ *   get:
+ *     summary: Obtener proyectos del usuario autenticado
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de proyectos del usuario
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       name:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       creator_username:
+ *                         type: string
+ *                       num_tasks:
+ *                         type: integer
+ */
+router.get("/projects", authMiddleware, getUserProjects);
+
+/**
+ * @swagger
+ * /user/tasks:
+ *   get:
+ *     summary: Obtener tareas del usuario autenticado
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de tareas asignadas al usuario
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       description:
+ *                         type: string
+ *                       project_name:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                       priority:
+ *                         type: string
+ *                       completed:
+ *                         type: boolean
+ *                       tags:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ */
+router.get("/tasks", authMiddleware, getUserTasks);
 
 export default router;

@@ -1,6 +1,9 @@
 // src/repositories/userRepository.js
 import { pool } from "../db/database.js";
 
+// Export pool for direct queries in controllers when needed
+export { pool };
+
 export const findAll = async (client = pool) => {
   const result = await client.query(
     "SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at FROM users ORDER BY id ASC"
