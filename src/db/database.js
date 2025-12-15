@@ -30,6 +30,10 @@ if (process.env.VERCEL && connectionString) {
       .replace("?pgbouncer=true&", "?")
       .replace("?pgbouncer=true", "");
   }
+
+  // CRITICAL: Remove sslmode parameter - it overrides our custom SSL config
+  connectionString = connectionString.replace(/[?&]sslmode=\w+/g, "");
+  console.log("🔧 Removed sslmode parameter to use custom SSL config");
 }
 
 // Debug logging for Vercel
