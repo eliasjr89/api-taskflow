@@ -12,7 +12,8 @@ export const pool = new Pool({
   password: env.DB_PASSWORD,
   max: env.PG_MAX_CLIENTS ? parseInt(env.PG_MAX_CLIENTS) : 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
+  ssl: env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
 pool.on("error", (err) => {
