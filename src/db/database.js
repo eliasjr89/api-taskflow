@@ -9,8 +9,12 @@ if (env.NODE_ENV === "development" && !process.env.VERCEL) {
 
 const { Pool } = pg;
 
+// Prioritize manual override for Vercel (to use direct connection instead of pooler)
 const connectionString =
-  env.POSTGRES_PRISMA_URL || env.POSTGRES_URL || env.DATABASE_URL;
+  env.DATABASE_URL_OVERRIDE ||
+  env.POSTGRES_PRISMA_URL ||
+  env.POSTGRES_URL ||
+  env.DATABASE_URL;
 
 const poolConfig = {
   max: env.PG_MAX_CLIENTS ? parseInt(env.PG_MAX_CLIENTS) : 20,

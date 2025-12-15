@@ -18,6 +18,7 @@ const envSchema = z
     DATABASE_URL: z.string().optional(),
     POSTGRES_URL: z.string().optional(),
     POSTGRES_PRISMA_URL: z.string().optional(),
+    DATABASE_URL_OVERRIDE: z.string().optional(), // Manual override for Vercel
     PG_MAX_CLIENTS: z.string().optional(),
     JWT_SECRET: z.string().min(10, "JWT_SECRET must be at least 10 chars long"),
     JWT_EXPIRES_IN: z.string().default("1h"),
