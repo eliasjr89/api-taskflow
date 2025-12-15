@@ -2,7 +2,10 @@
 import { z } from "zod";
 import dotenv from "dotenv";
 
-dotenv.config();
+// Only load .env file in local development (not in Vercel)
+if (!process.env.VERCEL) {
+  dotenv.config();
+}
 
 const envSchema = z
   .object({
