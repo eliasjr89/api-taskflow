@@ -10,11 +10,27 @@ if (env.NODE_ENV === "development" && !process.env.VERCEL) {
 const { Pool } = pg;
 
 // Prioritize manual override for Vercel (to use direct connection instead of pooler)
-const connectionString =
+let connectionString =
   env.DATABASE_URL_OVERRIDE ||
   env.POSTGRES_PRISMA_URL ||
   env.POSTGRES_URL ||
   env.DATABASE_URL;
+
+// CRITICAL FIX: In Vercel, automatically replace pooler port (6543) with direct port (5432)
+// This avoids SSL certificate issues with Supabase pooler
+if (process.env.VERCEL && connectionString) {
+  if (connectionString.includes(":6543/")) {
+    console.log(
+      "🔧 Vercel detected: Switching from pooler (6543) to direct connection (5432)"
+    );
+    connectionString = connectionString.replace(":6543/", ":5432/");
+    // Also remove pgbouncer parameter if present
+    connectionString = connectionString
+      .replace("&pgbouncer=true", "")
+      .replace("?pgbouncer=true&", "?")
+      .replace("?pgbouncer=true", "");
+  }
+}
 
 // Debug logging for Vercel
 console.log("🔍 Database connection debug:");
@@ -28,6 +44,7 @@ console.log(
     : "unknown"
 );
 console.log("  - Environment:", env.NODE_ENV);
+console.log("  - Is Vercel:", !!process.env.VERCEL);
 
 const poolConfig = {
   max: env.PG_MAX_CLIENTS ? parseInt(env.PG_MAX_CLIENTS) : 20,
