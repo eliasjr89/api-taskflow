@@ -234,3 +234,4 @@ Tu API en Vercel escala automáticamente:
 ---
 
 **¿Necesitas ayuda?** Consulta la [documentación de Vercel](https://vercel.com/docs) o los logs de tu deployment.
+# Trigger redeploy - lun 15 dic 2025 17:44:08 CET
