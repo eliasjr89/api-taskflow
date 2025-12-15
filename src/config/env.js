@@ -26,12 +26,13 @@ const envSchema = z
   .refine(
     (data) =>
       (data.DB_HOST && data.DB_USER && data.DB_PASSWORD && data.DB_NAME) ||
+      data.DATABASE_URL_OVERRIDE ||
       data.DATABASE_URL ||
       data.POSTGRES_URL ||
       data.POSTGRES_PRISMA_URL,
     {
       message:
-        "Database configuration missing. Provide either (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) or a connection string (POSTGRES_PRISMA_URL / POSTGRES_URL / DATABASE_URL).",
+        "Database configuration missing. Provide either (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) or a connection string (DATABASE_URL_OVERRIDE / POSTGRES_PRISMA_URL / POSTGRES_URL / DATABASE_URL).",
       path: ["DB_HOST"], // Error pointer
     }
   );
