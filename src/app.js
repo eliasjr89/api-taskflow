@@ -21,6 +21,9 @@ import { limiter, hppMiddleware } from "./middleware/security.middleware.js";
 const app = express();
 
 /* ───────────── Middlewares globales ───────────── */
+// Trust proxy is required for Vercel/Heroku/etc to get correct IP
+app.set("trust proxy", 1);
+
 // app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors());
 app.use(morgan("dev"));
