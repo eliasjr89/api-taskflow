@@ -132,3 +132,9 @@ export const getProjectUsers = async (id) => {
   if (!project) throw new AppError("Project not found", 404);
   return await ProjectRepository.getProjectUsers(id);
 };
+
+export const getProjectTasks = async (id) => {
+  const project = await ProjectRepository.findById(id);
+  if (!project) throw new AppError("Project not found", 404);
+  return await ProjectRepository.getProjectTasks(id);
+};

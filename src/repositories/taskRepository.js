@@ -235,3 +235,25 @@ export const checkTagsExist = async (tagIds, client = pool) => {
   );
   return res.rows.length === tagIds.length;
 };
+
+export const getTaskUsers = async (taskId, client = pool) => {
+  const query = `
+    SELECT u.id, u.username, u.name, u.lastname, u.email
+    FROM users u
+    JOIN tasks_users tu ON tu.user_id = u.id
+    WHERE tu.task_id = $1
+  `;
+  const result = await client.query(query, [taskId]);
+  return result.rows;
+};
+
+export const getTaskTags = async (taskId, client = pool) => {
+  const query = `
+    SELECT tag.id, tag.name
+    FROM tags tag
+    JOIN tasks_tags tt ON tt.tag_id = tag.id
+    WHERE tt.task_id = $1
+  `;
+  const result = await client.query(query, [taskId]);
+  return result.rows;
+};

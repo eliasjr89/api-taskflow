@@ -7,6 +7,7 @@ import {
   updateProject,
   deleteProject,
   getProjectUsers,
+  getProjectTasks,
   addUsersToProject,
   removeUserFromProject,
 } from "../controllers/projectController.js";
@@ -152,5 +153,26 @@ router.delete(
   validate(removeUserFromProjectSchema),
   removeUserFromProject
 );
+
+// Project Tasks
+/**
+ * @swagger
+ * /projects/{id}/tasks:
+ *   get:
+ *     summary: Obtener tareas del proyecto
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de tareas del proyecto
+ *       404:
+ *         description: Proyecto no encontrado
+ */
+router.get("/:id/tasks", validate(getProjectSchema), getProjectTasks);
 
 export default router;

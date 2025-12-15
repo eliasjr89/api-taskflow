@@ -10,6 +10,8 @@ import {
   removeUserFromTask,
   addTagsToTask,
   removeTagFromTask,
+  getTaskUsers,
+  getTaskTags,
 } from "../controllers/taskController.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
@@ -193,6 +195,25 @@ router.put("/:id", validate(updateTaskSchema), updateTask);
 router.delete("/:id", validate(getTaskSchema), deleteTask);
 
 // Task Members
+/**
+ * @swagger
+ * /tasks/{id}/users:
+ *   get:
+ *     summary: Obtener usuarios asignados a la tarea
+ *     tags: [Tasks]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios de la tarea
+ *       404:
+ *         description: Tarea no encontrada
+ */
+router.get("/:id/users", validate(getTaskSchema), getTaskUsers);
 router.post("/:id/users", validate(addUsersToTaskSchema), addUsersToTask);
 router.delete(
   "/:id/users/:userId",
@@ -201,6 +222,25 @@ router.delete(
 );
 
 // Task Tags
+/**
+ * @swagger
+ * /tasks/{id}/tags:
+ *   get:
+ *     summary: Obtener etiquetas de la tarea
+ *     tags: [Tasks]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de etiquetas de la tarea
+ *       404:
+ *         description: Tarea no encontrada
+ */
+router.get("/:id/tags", validate(getTaskSchema), getTaskTags);
 router.post("/:id/tags", validate(addTagsToTaskSchema), addTagsToTask);
 router.delete(
   "/:id/tags/:tagId",

@@ -173,3 +173,15 @@ export const removeTagFromTask = async (id, tagId) => {
   if (!task) throw new AppError("Task not found", 404);
   await TaskRepository.removeTag(id, tagId);
 };
+
+export const getTaskUsers = async (id) => {
+  const task = await TaskRepository.findById(id);
+  if (!task) throw new AppError("Task not found", 404);
+  return await TaskRepository.getTaskUsers(id);
+};
+
+export const getTaskTags = async (id) => {
+  const task = await TaskRepository.findById(id);
+  if (!task) throw new AppError("Task not found", 404);
+  return await TaskRepository.getTaskTags(id);
+};

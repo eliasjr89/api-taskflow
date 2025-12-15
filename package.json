@@ -4,7 +4,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "db:reset": "node scripts/database/reset-users.js",
+    "db:seed": "node scripts/database/seed-database.js",
+    "db:check": "node scripts/database/check-database.js",
+    "test:endpoints": "bash scripts/testing/test-all-endpoints.sh"
   },
   "keywords": [],
   "author": "",

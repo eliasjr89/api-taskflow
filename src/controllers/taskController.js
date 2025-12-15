@@ -67,3 +67,21 @@ export const removeTagFromTask = catchAsync(async (req, res) => {
   await TaskService.removeTagFromTask(req.params.id, req.params.tagId);
   res.status(200).json({ success: true, message: "Tag removed from task" });
 });
+
+export const getTaskUsers = catchAsync(async (req, res) => {
+  const users = await TaskService.getTaskUsers(req.params.id);
+  res.status(200).json({
+    success: true,
+    message: "Task users fetched successfully",
+    data: users,
+  });
+});
+
+export const getTaskTags = catchAsync(async (req, res) => {
+  const tags = await TaskService.getTaskTags(req.params.id);
+  res.status(200).json({
+    success: true,
+    message: "Task tags fetched successfully",
+    data: tags,
+  });
+});

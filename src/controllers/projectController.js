@@ -72,3 +72,13 @@ export const removeUserFromProject = catchAsync(async (req, res) => {
     message: "User removed from project",
   });
 });
+
+// Get project tasks
+export const getProjectTasks = catchAsync(async (req, res) => {
+  const tasks = await ProjectService.getProjectTasks(req.params.id);
+  res.status(200).json({
+    success: true,
+    data: tasks,
+    message: "Project tasks fetched successfully",
+  });
+});

@@ -122,7 +122,7 @@
 
 - **Repositorio**: https://github.com/eliasjr89/api-taskflow
 - **Vercel Dashboard**: https://vercel.com/eliasjr89/api-taskflow
-- **Documentación**: Ver archivos `*.md` en el repositorio
+- **Documentación**: Ver archivos en `docs/`
 
 ---
 
