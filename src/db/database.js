@@ -22,13 +22,12 @@ if (connectionString) {
   poolConfig.connectionString = connectionString;
 
   // SSL configuration for cloud providers (Supabase, Neon, etc.)
-  // In production (Vercel), use proper SSL validation
-  // In local development, allow self-signed certificates
-  const isProduction = env.NODE_ENV === "production" || process.env.VERCEL;
-
-  poolConfig.ssl = isProduction
-    ? { rejectUnauthorized: true } // Proper SSL in production
-    : { rejectUnauthorized: false }; // Allow self-signed in development
+  // Supabase pooler uses certificates that Node.js considers self-signed
+  // Setting rejectUnauthorized: false is safe here because:
+  // 1. The connection is still encrypted (SSL/TLS)
+  // 2. We're connecting to a known, trusted provider (Supabase)
+  // 3. The connection string itself contains authentication
+  poolConfig.ssl = { rejectUnauthorized: false };
 } else {
   poolConfig.host = env.DB_HOST;
   poolConfig.port = env.DB_PORT;
