@@ -4,19 +4,33 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const envSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
-  PORT: z.string().default("3000"),
-  DB_HOST: z.string().min(1, "DB_HOST is required"),
-  DB_PORT: z.string().default("5432"),
-  DB_USER: z.string().min(1, "DB_USER is required"),
-  DB_PASSWORD: z.string().min(1, "DB_PASSWORD is required"),
-  DB_NAME: z.string().min(1, "DB_NAME is required"),
-  JWT_SECRET: z.string().min(10, "JWT_SECRET must be at least 10 chars long"),
-  JWT_EXPIRES_IN: z.string().default("1h"),
-});
+const envSchema = z
+  .object({
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
+    PORT: z.string().default("3000"),
+    DB_HOST: z.string().optional(),
+    DB_PORT: z.string().default("5432"),
+    DB_USER: z.string().optional(),
+    DB_PASSWORD: z.string().optional(),
+    DB_NAME: z.string().optional(),
+    DATABASE_URL: z.string().optional(),
+    POSTGRES_URL: z.string().optional(),
+    JWT_SECRET: z.string().min(10, "JWT_SECRET must be at least 10 chars long"),
+    JWT_EXPIRES_IN: z.string().default("1h"),
+  })
+  .refine(
+    (data) =>
+      (data.DB_HOST && data.DB_USER && data.DB_PASSWORD && data.DB_NAME) ||
+      data.DATABASE_URL ||
+      data.POSTGRES_URL,
+    {
+      message:
+        "Database configuration missing. Provide either (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) or a connection string (DATABASE_URL / POSTGRES_URL).",
+      path: ["DB_HOST"], // Error pointer
+    }
+  );
 
 const parseEnv = () => {
   const result = envSchema.safeParse(process.env);

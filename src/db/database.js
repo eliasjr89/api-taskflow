@@ -4,17 +4,24 @@ import { env } from "../config/env.js";
 
 const { Pool } = pg;
 
-export const pool = new Pool({
-  host: env.DB_HOST,
-  port: env.DB_PORT,
-  database: env.DB_NAME,
-  user: env.DB_USER,
-  password: env.DB_PASSWORD,
+const poolConfig = {
   max: env.PG_MAX_CLIENTS ? parseInt(env.PG_MAX_CLIENTS) : 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
   ssl: env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-});
+};
+
+if (env.POSTGRES_URL || env.DATABASE_URL) {
+  poolConfig.connectionString = env.POSTGRES_URL || env.DATABASE_URL;
+} else {
+  poolConfig.host = env.DB_HOST;
+  poolConfig.port = env.DB_PORT;
+  poolConfig.database = env.DB_NAME;
+  poolConfig.user = env.DB_USER;
+  poolConfig.password = env.DB_PASSWORD;
+}
+
+export const pool = new Pool(poolConfig);
 
 pool.on("error", (err) => {
   console.error("Unexpected error on idle client", err);
