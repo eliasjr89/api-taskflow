@@ -10,7 +10,8 @@
     "db:check": "node scripts/database/check-database.js",
     "test:endpoints": "bash scripts/testing/test-all-endpoints.sh",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "build": "echo 'No build necessary for Node.js backend'"
   },
   "keywords": [],
   "author": "",

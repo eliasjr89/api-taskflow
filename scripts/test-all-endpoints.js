@@ -253,7 +253,7 @@ async function testPermissions() {
     // User tries to access admin endpoint (should fail)
     await makeRequest('GET', '/admin/stats', userToken);
     error('User should NOT have access to admin stats');
-  } catch (err) {
+  } catch {
     success('User correctly denied access to admin endpoint');
   }
 
@@ -261,7 +261,7 @@ async function testPermissions() {
     // Manager tries to delete a user (should fail)
     await makeRequest('DELETE', '/users/3', managerToken);
     error('Manager should NOT be able to delete users');
-  } catch (err) {
+  } catch {
     success('Manager correctly denied permission to delete users');
   }
 
