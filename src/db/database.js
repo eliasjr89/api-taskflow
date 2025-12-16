@@ -97,7 +97,6 @@ export const connectDB = async () => {
     client.release();
   } catch (error) {
     console.error("Database connection error:", error);
-    console.error("Database connection error:", error);
     throw error;
   }
 };
