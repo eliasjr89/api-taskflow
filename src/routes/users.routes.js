@@ -1,21 +1,30 @@
 // src/routes/users.routes.js
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getAllUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
-} from "../controllers/userController.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
+} from '../controllers/userController.js';
+import { authMiddleware } from '../middleware/auth.middleware.js';
+import { uploadAvatar } from '../middleware/upload.middleware.js';
+import {
+  validateBody,
+  validateParams,
+} from '../middleware/validate.middleware.js';
 import {
   createUserSchema,
   updateUserSchema,
-  getUserSchema,
-} from "../schemas/user.schema.js";
+} from '../validators/userValidator.js';
+import Joi from 'joi';
 
 const router = Router();
+
+// ID validator
+const idSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+});
 
 /**
  * @swagger
@@ -31,11 +40,8 @@ router.use(authMiddleware);
  *   get:
  *     summary: Obtener todos los usuarios
  *     tags: [Users]
- *     responses:
- *       200:
- *         description: Lista de usuarios
  */
-router.get("/", getAllUsers);
+router.get('/', getAllUsers);
 
 /**
  * @swagger
@@ -43,19 +49,8 @@ router.get("/", getAllUsers);
  *   get:
  *     summary: Obtener usuario por ID
  *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Usuario encontrado
- *       404:
- *         description: Usuario no encontrado
  */
-router.get("/:id", validate(getUserSchema), getUserById);
+router.get('/:id', validateParams(idSchema), getUserById);
 
 /**
  * @swagger
@@ -63,28 +58,13 @@ router.get("/:id", validate(getUserSchema), getUserById);
  *   post:
  *     summary: Crear nuevo usuario
  *     tags: [Users]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - username
- *               - email
- *               - password
- *             properties:
- *               username:
- *                 type: string
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       201:
- *         description: Usuario creado
  */
-router.post("/", validate(createUserSchema), createUser);
+router.post(
+  '/',
+  uploadAvatar.single('profile_image'),
+  validateBody(createUserSchema),
+  createUser,
+);
 
 /**
  * @swagger
@@ -92,27 +72,14 @@ router.post("/", validate(createUserSchema), createUser);
  *   put:
  *     summary: Actualizar usuario
  *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               email:
- *                 type: string
- *     responses:
- *       200:
- *         description: Usuario actualizado
  */
-router.put("/:id", validate(updateUserSchema), updateUser);
+router.put(
+  '/:id',
+  uploadAvatar.single('profile_image'),
+  validateParams(idSchema),
+  validateBody(updateUserSchema),
+  updateUser,
+);
 
 /**
  * @swagger
@@ -120,16 +87,7 @@ router.put("/:id", validate(updateUserSchema), updateUser);
  *   delete:
  *     summary: Eliminar usuario
  *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Usuario eliminado
  */
-router.delete("/:id", validate(getUserSchema), deleteUser);
+router.delete('/:id', validateParams(idSchema), deleteUser);
 
 export default router;

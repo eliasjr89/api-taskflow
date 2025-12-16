@@ -1,13 +1,13 @@
 // src/controllers/tagsController.js
-import * as TagService from "../services/tagService.js";
-import { catchAsync } from "../utils/catchAsync.js";
+import * as TagService from '../services/tagService.js';
+import { catchAsync } from '../utils/catchAsync.js';
 
 export const getAllTags = catchAsync(async (req, res) => {
   const tags = await TagService.getAllTags();
   res.status(200).json({
     success: true,
     data: tags,
-    message: "Tags fetched successfully",
+    message: 'Tags fetched successfully',
   });
 });
 
@@ -16,7 +16,7 @@ export const getTagById = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     data: tag,
-    message: "Tag fetched successfully",
+    message: 'Tag fetched successfully',
   });
 });
 
@@ -25,7 +25,7 @@ export const createTag = catchAsync(async (req, res) => {
   res.status(201).json({
     success: true,
     data: tag,
-    message: "Tag created successfully",
+    message: 'Tag created successfully',
   });
 });
 
@@ -34,7 +34,7 @@ export const updateTag = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     data: tag,
-    message: "Tag updated successfully",
+    message: 'Tag updated successfully',
   });
 });
 
@@ -43,6 +43,6 @@ export const deleteTag = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     data: null,
-    message: "Tag deleted successfully",
+    message: 'Tag deleted successfully',
   });
 });

@@ -1,19 +1,19 @@
 // src/routes/tags.routes.js
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getAllTags,
   getTagById,
   createTag,
   updateTag,
   deleteTag,
-} from "../controllers/tagsController.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
+} from '../controllers/tagsController.js';
+import { authMiddleware } from '../middleware/auth.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
 import {
   createTagSchema,
   updateTagSchema,
   getTagSchema,
-} from "../schemas/tag.schema.js";
+} from '../schemas/tag.schema.js';
 
 const router = Router();
 
@@ -35,7 +35,7 @@ router.use(authMiddleware);
  *       200:
  *         description: Lista de etiquetas
  */
-router.get("/", getAllTags);
+router.get('/', getAllTags);
 
 /**
  * @swagger
@@ -53,7 +53,7 @@ router.get("/", getAllTags);
  *       200:
  *         description: Etiqueta encontrada
  */
-router.get("/:id", validate(getTagSchema), getTagById);
+router.get('/:id', validate(getTagSchema), getTagById);
 
 /**
  * @swagger
@@ -76,7 +76,7 @@ router.get("/:id", validate(getTagSchema), getTagById);
  *       201:
  *         description: Etiqueta creada
  */
-router.post("/", validate(createTagSchema), createTag);
+router.post('/', validate(createTagSchema), createTag);
 
 /**
  * @swagger
@@ -102,7 +102,7 @@ router.post("/", validate(createTagSchema), createTag);
  *       200:
  *         description: Etiqueta actualizada
  */
-router.put("/:id", validate(updateTagSchema), updateTag);
+router.put('/:id', validate(updateTagSchema), updateTag);
 
 /**
  * @swagger
@@ -120,6 +120,6 @@ router.put("/:id", validate(updateTagSchema), updateTag);
  *       200:
  *         description: Etiqueta eliminada
  */
-router.delete("/:id", validate(getTagSchema), deleteTag);
+router.delete('/:id', validate(getTagSchema), deleteTag);
 
 export default router;

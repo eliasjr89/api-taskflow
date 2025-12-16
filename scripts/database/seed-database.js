@@ -1,32 +1,32 @@
-import "dotenv/config";
-import { pool } from "../../src/db/database.js";
+import 'dotenv/config';
+import { pool } from '../../src/db/database.js';
 
 async function seedDatabase() {
   try {
-    console.log("🌱 Poblando base de datos con datos de prueba...\n");
+    console.log('🌱 Poblando base de datos con datos de prueba...\n');
 
     // 1. CREAR PROYECTOS
-    console.log("📁 Creando proyectos...");
+    console.log('📁 Creando proyectos...');
 
     const projects = [
       {
-        name: "Website Redesign",
-        description: "Rediseño completo del sitio web corporativo",
+        name: 'Website Redesign',
+        description: 'Rediseño completo del sitio web corporativo',
         creator_id: 1, // admin
       },
       {
-        name: "Mobile App Development",
-        description: "Desarrollo de aplicación móvil para iOS y Android",
+        name: 'Mobile App Development',
+        description: 'Desarrollo de aplicación móvil para iOS y Android',
         creator_id: 1, // admin
       },
       {
-        name: "API Integration",
-        description: "Integración de APIs de terceros",
+        name: 'API Integration',
+        description: 'Integración de APIs de terceros',
         creator_id: 2, // manager
       },
       {
-        name: "Database Migration",
-        description: "Migración de base de datos a PostgreSQL",
+        name: 'Database Migration',
+        description: 'Migración de base de datos a PostgreSQL',
         creator_id: 2, // manager
       },
     ];
@@ -34,15 +34,15 @@ async function seedDatabase() {
     const projectIds = [];
     for (const project of projects) {
       const result = await pool.query(
-        "INSERT INTO projects (name, description, creator_id) VALUES ($1, $2, $3) RETURNING id",
-        [project.name, project.description, project.creator_id]
+        'INSERT INTO projects (name, description, creator_id) VALUES ($1, $2, $3) RETURNING id',
+        [project.name, project.description, project.creator_id],
       );
       projectIds.push(result.rows[0].id);
       console.log(`   ✅ ${project.name} (ID: ${result.rows[0].id})`);
     }
 
     // 2. ASIGNAR USUARIOS A PROYECTOS
-    console.log("\n👥 Asignando colaboradores a proyectos...");
+    console.log('\n👥 Asignando colaboradores a proyectos...');
 
     const projectUserAssignments = [
       { project_id: projectIds[0], user_id: 1 }, // admin en Website Redesign
@@ -58,105 +58,105 @@ async function seedDatabase() {
 
     for (const assignment of projectUserAssignments) {
       await pool.query(
-        "INSERT INTO projects_users (project_id, user_id) VALUES ($1, $2)",
-        [assignment.project_id, assignment.user_id]
+        'INSERT INTO projects_users (project_id, user_id) VALUES ($1, $2)',
+        [assignment.project_id, assignment.user_id],
       );
     }
     console.log(`   ✅ ${projectUserAssignments.length} asignaciones creadas`);
 
     // 3. CREAR TAREAS
-    console.log("\n📋 Creando tareas...");
+    console.log('\n📋 Creando tareas...');
 
     const tasks = [
       // Website Redesign
       {
-        description: "Diseñar mockups de la página principal",
+        description: 'Diseñar mockups de la página principal',
         project_id: projectIds[0],
         status_id: 2, // in_progress
-        priority: "high",
+        priority: 'high',
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
       },
       {
-        description: "Implementar diseño responsive",
+        description: 'Implementar diseño responsive',
         project_id: projectIds[0],
         status_id: 1, // pending
-        priority: "medium",
+        priority: 'medium',
         due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 días
       },
       {
-        description: "Optimizar imágenes y assets",
+        description: 'Optimizar imágenes y assets',
         project_id: projectIds[0],
         status_id: 1, // pending
-        priority: "low",
+        priority: 'low',
         due_date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21 días
       },
       // Mobile App
       {
-        description: "Configurar proyecto React Native",
+        description: 'Configurar proyecto React Native',
         project_id: projectIds[1],
         status_id: 4, // completed
-        priority: "high",
+        priority: 'high',
         due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // hace 2 días
         completed: true,
       },
       {
-        description: "Implementar autenticación",
+        description: 'Implementar autenticación',
         project_id: projectIds[1],
         status_id: 2, // in_progress
-        priority: "high",
+        priority: 'high',
         due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 días
       },
       {
-        description: "Diseñar pantallas principales",
+        description: 'Diseñar pantallas principales',
         project_id: projectIds[1],
         status_id: 2, // in_progress
-        priority: "medium",
+        priority: 'medium',
         due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 días
       },
       // API Integration
       {
-        description: "Documentar endpoints de terceros",
+        description: 'Documentar endpoints de terceros',
         project_id: projectIds[2],
         status_id: 4, // completed
-        priority: "medium",
+        priority: 'medium',
         due_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // hace 5 días
         completed: true,
       },
       {
-        description: "Implementar cliente HTTP",
+        description: 'Implementar cliente HTTP',
         project_id: projectIds[2],
         status_id: 2, // in_progress
-        priority: "high",
+        priority: 'high',
         due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 días
       },
       {
-        description: "Agregar manejo de errores",
+        description: 'Agregar manejo de errores',
         project_id: projectIds[2],
         status_id: 1, // pending
-        priority: "medium",
+        priority: 'medium',
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
       },
       // Database Migration
       {
-        description: "Analizar esquema actual",
+        description: 'Analizar esquema actual',
         project_id: projectIds[3],
         status_id: 4, // completed
-        priority: "high",
+        priority: 'high',
         due_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // hace 10 días
         completed: true,
       },
       {
-        description: "Crear scripts de migración",
+        description: 'Crear scripts de migración',
         project_id: projectIds[3],
         status_id: 2, // in_progress
-        priority: "high",
+        priority: 'high',
         due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 días
       },
       {
-        description: "Probar migración en staging",
+        description: 'Probar migración en staging',
         project_id: projectIds[3],
         status_id: 1, // pending
-        priority: "high",
+        priority: 'high',
         due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 días
       },
     ];
@@ -173,18 +173,18 @@ async function seedDatabase() {
           task.priority,
           task.due_date,
           task.completed || false,
-        ]
+        ],
       );
       taskIds.push(result.rows[0].id);
       console.log(
         `   ✅ ${task.description.substring(0, 40)}... (ID: ${
           result.rows[0].id
-        })`
+        })`,
       );
     }
 
     // 4. ASIGNAR USUARIOS A TAREAS
-    console.log("\n👤 Asignando usuarios a tareas...");
+    console.log('\n👤 Asignando usuarios a tareas...');
 
     const taskUserAssignments = [
       // Website Redesign tasks
@@ -207,14 +207,14 @@ async function seedDatabase() {
 
     for (const assignment of taskUserAssignments) {
       await pool.query(
-        "INSERT INTO tasks_users (task_id, user_id) VALUES ($1, $2)",
-        [assignment.task_id, assignment.user_id]
+        'INSERT INTO tasks_users (task_id, user_id) VALUES ($1, $2)',
+        [assignment.task_id, assignment.user_id],
       );
     }
     console.log(`   ✅ ${taskUserAssignments.length} asignaciones creadas`);
 
     // 5. ASIGNAR ETIQUETAS A TAREAS
-    console.log("\n🔖 Asignando etiquetas a tareas...");
+    console.log('\n🔖 Asignando etiquetas a tareas...');
 
     const taskTagAssignments = [
       // Website Redesign
@@ -242,17 +242,17 @@ async function seedDatabase() {
 
     for (const assignment of taskTagAssignments) {
       await pool.query(
-        "INSERT INTO tasks_tags (task_id, tag_id) VALUES ($1, $2)",
-        [assignment.task_id, assignment.tag_id]
+        'INSERT INTO tasks_tags (task_id, tag_id) VALUES ($1, $2)',
+        [assignment.task_id, assignment.tag_id],
       );
     }
     console.log(`   ✅ ${taskTagAssignments.length} asignaciones creadas`);
 
-    console.log("\n╔════════════════════════════════════════════════╗");
-    console.log("║   ✅ BASE DE DATOS POBLADA EXITOSAMENTE        ║");
-    console.log("╚════════════════════════════════════════════════╝\n");
+    console.log('\n╔════════════════════════════════════════════════╗');
+    console.log('║   ✅ BASE DE DATOS POBLADA EXITOSAMENTE        ║');
+    console.log('╚════════════════════════════════════════════════╝\n');
 
-    console.log("📊 RESUMEN:");
+    console.log('📊 RESUMEN:');
     console.log(`   Proyectos creados: ${projects.length}`);
     console.log(`   Tareas creadas: ${tasks.length}`);
     console.log(`   Colaboradores asignados: ${projectUserAssignments.length}`);
@@ -262,7 +262,7 @@ async function seedDatabase() {
     await pool.end();
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error('❌ Error:', error);
     await pool.end();
     process.exit(1);
   }

@@ -68,7 +68,7 @@ echo "✅ Manager token obtenido"
 USER_TOKEN=$(curl -s -X POST "$BASE_URL/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"user@taskflow.com","password":"User123"}' | jq -r '.data.token')
-echo "✅ User token obtenido"
+echo "✅ User token obtenido: ${USER_TOKEN:0:10}..."
 
 echo ""
 echo "═══════════════════════════════════════════════"
@@ -85,9 +85,9 @@ echo "3️⃣  PROYECTOS"
 echo "═══════════════════════════════════════════════"
 
 test_endpoint "GET" "/projects" "" "$ADMIN_TOKEN" "Obtener todos los proyectos (admin)"
-test_endpoint "GET" "/projects/6" "" "$ADMIN_TOKEN" "Obtener proyecto por ID (admin)"
-test_endpoint "GET" "/projects/6/users" "" "$ADMIN_TOKEN" "Obtener usuarios del proyecto (admin)"
-test_endpoint "GET" "/projects/6/tasks" "" "$ADMIN_TOKEN" "Obtener tareas del proyecto (admin)"
+test_endpoint "GET" "/projects/1" "" "$ADMIN_TOKEN" "Obtener proyecto por ID (admin)"
+test_endpoint "GET" "/projects/1/users" "" "$ADMIN_TOKEN" "Obtener usuarios del proyecto (admin)"
+test_endpoint "GET" "/projects/1/tasks" "" "$ADMIN_TOKEN" "Obtener tareas del proyecto (admin)"
 test_endpoint "GET" "/user/projects" "" "$USER_TOKEN" "Obtener proyectos del usuario (user)"
 
 echo ""

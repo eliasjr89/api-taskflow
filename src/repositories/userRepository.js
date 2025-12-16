@@ -1,18 +1,18 @@
 // src/repositories/userRepository.js
-import { pool } from "../db/database.js";
+import { pool } from '../db/database.js';
 
 // Export pool for direct queries in controllers when needed
 export { pool };
 
 export const findAll = async (client = pool) => {
   const result = await client.query(
-    "SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at FROM users ORDER BY id ASC"
+    'SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at FROM users ORDER BY id ASC',
   );
   return result.rows;
 };
 
 export const findByEmail = async (email, client = pool) => {
-  const result = await client.query("SELECT * FROM users WHERE email = $1", [
+  const result = await client.query('SELECT * FROM users WHERE email = $1', [
     email,
   ]);
   return result.rows[0];
@@ -20,14 +20,14 @@ export const findByEmail = async (email, client = pool) => {
 
 export const findById = async (id, client = pool) => {
   const result = await client.query(
-    "SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at FROM users WHERE id = $1",
-    [id]
+    'SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at FROM users WHERE id = $1',
+    [id],
   );
   return result.rows[0];
 };
 
 export const findByUsername = async (username, client = pool) => {
-  const result = await client.query("SELECT * FROM users WHERE username = $1", [
+  const result = await client.query('SELECT * FROM users WHERE username = $1', [
     username,
   ]);
   return result.rows[0];
@@ -74,8 +74,8 @@ export const update = async (id, userData, client = pool) => {
 
 export const deleteById = async (id, client = pool) => {
   const result = await client.query(
-    "DELETE FROM users WHERE id=$1 RETURNING id",
-    [id]
+    'DELETE FROM users WHERE id=$1 RETURNING id',
+    [id],
   );
   return result.rows[0];
 };

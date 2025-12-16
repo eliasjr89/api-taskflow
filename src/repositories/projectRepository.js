@@ -1,23 +1,21 @@
 // src/repositories/projectRepository.js
-import { pool } from "../db/database.js";
+import { pool } from '../db/database.js';
 
 export const findAll = async (client = pool) => {
   const query = `
-      SELECT 
-        p.id,
-        p.name,
-        p.description,
-        p.created_at,
-        u.username AS creator_username,
-        COUNT(DISTINCT pu.user_id) AS num_collaborators,
-        COUNT(DISTINCT t.id) AS num_tasks
-      FROM projects p
-      LEFT JOIN users u ON p.creator_id = u.id
-      LEFT JOIN projects_users pu ON p.id = pu.project_id
-      LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted = false
-      GROUP BY p.id, u.username
-      ORDER BY p.id ASC
-    `;
+    SELECT 
+      p.*, 
+      u.username as creator_username, 
+      u.name as creator_name, 
+      u.lastname as creator_lastname, 
+      u.role as creator_role,
+      COUNT(DISTINCT t.id) AS num_tasks
+    FROM projects p
+    LEFT JOIN users u ON p.creator_id = u.id
+    LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted = false
+    GROUP BY p.id, u.id
+    ORDER BY p.created_at DESC
+  `;
   const result = await client.query(query);
   return result.rows;
 };
@@ -68,8 +66,8 @@ export const update = async (id, projectData, client = pool) => {
 
 export const deleteById = async (id, client = pool) => {
   const result = await client.query(
-    "DELETE FROM projects WHERE id=$1 RETURNING *",
-    [id]
+    'DELETE FROM projects WHERE id=$1 RETURNING *',
+    [id],
   );
   return result.rows[0];
 };
@@ -81,21 +79,21 @@ export const addUsers = async (projectId, userIds, client = pool) => {
     // Simple insert for now, assuming external check or error handling.
     // Better safely:
     await client.query(
-      "INSERT INTO projects_users (project_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-      [projectId, uid]
+      'INSERT INTO projects_users (project_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [projectId, uid],
     );
   }
 };
 
 export const removeUser = async (projectId, userId, client = pool) => {
   await client.query(
-    "DELETE FROM projects_users WHERE project_id=$1 AND user_id=$2",
-    [projectId, userId]
+    'DELETE FROM projects_users WHERE project_id=$1 AND user_id=$2',
+    [projectId, userId],
   );
 };
 
 export const removeAllUsers = async (projectId, client = pool) => {
-  await client.query("DELETE FROM projects_users WHERE project_id=$1", [
+  await client.query('DELETE FROM projects_users WHERE project_id=$1', [
     projectId,
   ]);
 };
@@ -130,10 +128,12 @@ export const getProjectTasks = async (projectId, client = pool) => {
 
 // Helper
 export const checkUsersExist = async (userIds, client = pool) => {
-  if (!userIds || userIds.length === 0) return true;
+  if (!userIds || userIds.length === 0) {
+    return true;
+  }
   const res = await client.query(
-    "SELECT id FROM users WHERE id = ANY($1::int[])",
-    [userIds]
+    'SELECT id FROM users WHERE id = ANY($1::int[])',
+    [userIds],
   );
   return res.rows.length === userIds.length;
 };

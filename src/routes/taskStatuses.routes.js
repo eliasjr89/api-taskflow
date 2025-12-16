@@ -1,19 +1,19 @@
 // src/routes/taskStatuses.routes.js
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getAllTaskStatuses,
   getTaskStatusById,
   createTaskStatus,
   updateTaskStatus,
   deleteTaskStatus,
-} from "../controllers/taskStatusController.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
+} from '../controllers/taskStatusController.js';
+import { authMiddleware } from '../middleware/auth.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
 import {
   createTaskStatusSchema,
   updateTaskStatusSchema,
   getTaskStatusSchema,
-} from "../schemas/taskStatus.schema.js";
+} from '../schemas/taskStatus.schema.js';
 
 const router = Router();
 
@@ -35,7 +35,7 @@ router.use(authMiddleware);
  *       200:
  *         description: Lista de estados
  */
-router.get("/", getAllTaskStatuses);
+router.get('/', getAllTaskStatuses);
 
 /**
  * @swagger
@@ -53,7 +53,7 @@ router.get("/", getAllTaskStatuses);
  *       200:
  *         description: Estado encontrado
  */
-router.get("/:id", validate(getTaskStatusSchema), getTaskStatusById);
+router.get('/:id', validate(getTaskStatusSchema), getTaskStatusById);
 
 /**
  * @swagger
@@ -76,7 +76,7 @@ router.get("/:id", validate(getTaskStatusSchema), getTaskStatusById);
  *       201:
  *         description: Estado creado
  */
-router.post("/", validate(createTaskStatusSchema), createTaskStatus);
+router.post('/', validate(createTaskStatusSchema), createTaskStatus);
 
 /**
  * @swagger
@@ -102,7 +102,7 @@ router.post("/", validate(createTaskStatusSchema), createTaskStatus);
  *       200:
  *         description: Estado actualizado
  */
-router.put("/:id", validate(updateTaskStatusSchema), updateTaskStatus);
+router.put('/:id', validate(updateTaskStatusSchema), updateTaskStatus);
 
 /**
  * @swagger
@@ -120,6 +120,6 @@ router.put("/:id", validate(updateTaskStatusSchema), updateTaskStatus);
  *       200:
  *         description: Estado eliminado
  */
-router.delete("/:id", validate(getTaskStatusSchema), deleteTaskStatus);
+router.delete('/:id', validate(getTaskStatusSchema), deleteTaskStatus);
 
 export default router;

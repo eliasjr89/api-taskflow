@@ -1,17 +1,17 @@
 // src/repositories/taskRepository.js
-import { pool } from "../db/database.js";
+import { pool } from '../db/database.js';
 
 export const findAll = async (
   { user_id, project_id, status_id, priority, tag_id, limit, offset },
-  client = pool
+  client = pool,
 ) => {
-  let filters = ["t.deleted = false"];
-  let values = [];
+  const filters = ['t.deleted = false'];
+  const values = [];
   let idx = 1;
 
   if (user_id) {
     filters.push(
-      `t.id IN (SELECT task_id FROM tasks_users WHERE user_id=$${idx++})`
+      `t.id IN (SELECT task_id FROM tasks_users WHERE user_id=$${idx++})`,
     );
     values.push(user_id);
   }
@@ -29,12 +29,12 @@ export const findAll = async (
   }
   if (tag_id) {
     filters.push(
-      `t.id IN (SELECT task_id FROM tasks_tags WHERE tag_id=$${idx++})`
+      `t.id IN (SELECT task_id FROM tasks_tags WHERE tag_id=$${idx++})`,
     );
     values.push(tag_id);
   }
 
-  const whereClause = `WHERE ${filters.join(" AND ")}`;
+  const whereClause = `WHERE ${filters.join(' AND ')}`;
 
   // Pagination params
   values.push(limit);
@@ -42,17 +42,18 @@ export const findAll = async (
   const limitOffsetClause = `LIMIT $${idx++} OFFSET $${idx++}`;
 
   const query = `
-      SELECT t.*, ts.name AS status,
+      SELECT t.*, ts.name AS status, p.name AS project_name,
              json_agg(DISTINCT jsonb_build_object('id', u.id, 'username', u.username, 'name', u.name, 'lastname', u.lastname)) FILTER (WHERE u.id IS NOT NULL) AS users,
              json_agg(DISTINCT jsonb_build_object('id', tag.id, 'name', tag.name)) FILTER (WHERE tag.id IS NOT NULL) AS tags
       FROM tasks t
       LEFT JOIN task_statuses ts ON t.status_id = ts.id
+      LEFT JOIN projects p ON t.project_id = p.id
       LEFT JOIN tasks_users tu ON t.id = tu.task_id
       LEFT JOIN users u ON tu.user_id = u.id
       LEFT JOIN tasks_tags tt ON t.id = tt.task_id
       LEFT JOIN tags tag ON tt.tag_id = tag.id
       ${whereClause}
-      GROUP BY t.id, ts.name
+      GROUP BY t.id, ts.name, p.name
       ORDER BY t.created_at DESC
       ${limitOffsetClause}
     `;
@@ -65,10 +66,6 @@ export const findAll = async (
     ${whereClause}
   `;
 
-  // We need to run count separately without limit/offset but with same filters
-  // NOTE: The filters array was built for the main query.
-  // For COUNT, we need to be careful with the indices if we reused the array without limit/offset.
-  // Actually, easiest way is:
   const countValues = values.slice(0, -2); // remove limit and offset
   const countRes = await client.query(countQuery, countValues);
 
@@ -80,6 +77,16 @@ export const findAll = async (
   };
 };
 
+export const deleteById = async (id, client = pool) => {
+  // Hard delete dependencies first
+  await client.query('DELETE FROM tasks_users WHERE task_id=$1', [id]);
+  await client.query('DELETE FROM tasks_tags WHERE task_id=$1', [id]);
+  const res = await client.query('DELETE FROM tasks WHERE id=$1 RETURNING *', [
+    id,
+  ]);
+  return res.rows[0];
+};
+
 export const findById = async (id, client = pool) => {
   const taskQuery = `
       SELECT t.*, ts.name AS status
@@ -88,7 +95,9 @@ export const findById = async (id, client = pool) => {
       WHERE t.id = $1 AND t.deleted = false
     `;
   const taskResult = await client.query(taskQuery, [id]);
-  if (!taskResult.rows.length) return null;
+  if (!taskResult.rows.length) {
+    return null;
+  }
 
   const task = taskResult.rows[0];
 
@@ -126,7 +135,7 @@ export const create = async (taskData, client = pool) => {
     description,
     project_id,
     status_id,
-    priority || "low",
+    priority || 'low',
     completed || false,
     due_date || null,
   ]);
@@ -159,8 +168,8 @@ export const update = async (id, taskData, client = pool) => {
 
 export const deleteSoft = async (id, client = pool) => {
   const res = await client.query(
-    "UPDATE tasks SET deleted=true, updated_at=NOW() WHERE id=$1 RETURNING *",
-    [id]
+    'UPDATE tasks SET deleted=true, updated_at=NOW() WHERE id=$1 RETURNING *',
+    [id],
   );
   return res.rows[0];
 };
@@ -168,70 +177,74 @@ export const deleteSoft = async (id, client = pool) => {
 export const addUsers = async (taskId, userIds, client = pool) => {
   for (const uid of userIds) {
     await client.query(
-      "INSERT INTO tasks_users (task_id, user_id) VALUES ($1,$2)",
-      [taskId, uid]
+      'INSERT INTO tasks_users (task_id, user_id) VALUES ($1,$2)',
+      [taskId, uid],
     );
   }
 };
 
 export const removeUser = async (taskId, userId, client = pool) => {
   await client.query(
-    "DELETE FROM tasks_users WHERE task_id=$1 AND user_id=$2",
-    [taskId, userId]
+    'DELETE FROM tasks_users WHERE task_id=$1 AND user_id=$2',
+    [taskId, userId],
   );
 };
 
 export const removeAllUsers = async (taskId, client = pool) => {
-  await client.query("DELETE FROM tasks_users WHERE task_id=$1", [taskId]);
+  await client.query('DELETE FROM tasks_users WHERE task_id=$1', [taskId]);
 };
 
 export const addTags = async (taskId, tagIds, client = pool) => {
   for (const tid of tagIds) {
     await client.query(
-      "INSERT INTO tasks_tags (task_id, tag_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
-      [taskId, tid]
+      'INSERT INTO tasks_tags (task_id, tag_id) VALUES ($1,$2) ON CONFLICT DO NOTHING',
+      [taskId, tid],
     );
   }
 };
 
 export const removeTag = async (taskId, tagId, client = pool) => {
-  await client.query("DELETE FROM tasks_tags WHERE task_id=$1 AND tag_id=$2", [
+  await client.query('DELETE FROM tasks_tags WHERE task_id=$1 AND tag_id=$2', [
     taskId,
     tagId,
   ]);
 };
 
 export const removeAllTags = async (taskId, client = pool) => {
-  await client.query("DELETE FROM tasks_tags WHERE task_id=$1", [taskId]);
+  await client.query('DELETE FROM tasks_tags WHERE task_id=$1', [taskId]);
 };
 
 // Helper checks
 export const checkProjectExists = async (id, client = pool) => {
-  const res = await client.query("SELECT id FROM projects WHERE id=$1", [id]);
+  const res = await client.query('SELECT id FROM projects WHERE id=$1', [id]);
   return res.rows.length > 0;
 };
 
 export const checkStatusExists = async (id, client = pool) => {
-  const res = await client.query("SELECT id FROM task_statuses WHERE id=$1", [
+  const res = await client.query('SELECT id FROM task_statuses WHERE id=$1', [
     id,
   ]);
   return res.rows.length > 0;
 };
 
 export const checkUsersExist = async (userIds, client = pool) => {
-  if (!userIds || userIds.length === 0) return true;
+  if (!userIds || userIds.length === 0) {
+    return true;
+  }
   const res = await client.query(
-    "SELECT id FROM users WHERE id = ANY($1::int[])",
-    [userIds]
+    'SELECT id FROM users WHERE id = ANY($1::int[])',
+    [userIds],
   );
   return res.rows.length === userIds.length;
 };
 
 export const checkTagsExist = async (tagIds, client = pool) => {
-  if (!tagIds || tagIds.length === 0) return true;
+  if (!tagIds || tagIds.length === 0) {
+    return true;
+  }
   const res = await client.query(
-    "SELECT id FROM tags WHERE id = ANY($1::int[])",
-    [tagIds]
+    'SELECT id FROM tags WHERE id = ANY($1::int[])',
+    [tagIds],
   );
   return res.rows.length === tagIds.length;
 };

@@ -1,9 +1,10 @@
 // src/controllers/userController.js
-import * as UserService from "../services/userService.js";
-import * as UserRepository from "../repositories/userRepository.js";
-import { catchAsync } from "../utils/catchAsync.js";
-import { AppError } from "../utils/AppError.js";
-import bcrypt from "bcrypt";
+import * as UserService from '../services/userService.js';
+import * as UserRepository from '../repositories/userRepository.js';
+import { catchAsync } from '../utils/catchAsync.js';
+import { AppError } from '../utils/AppError.js';
+import * as AuditService from '../services/auditService.js';
+import bcrypt from 'bcrypt';
 
 // Para rutas de perfil autenticado
 export const getProfile = catchAsync(async (req, res) => {
@@ -20,31 +21,49 @@ export const updateProfile = catchAsync(async (req, res) => {
   const userId = req.user.userId;
   const updatedUser = await UserService.updateUser(userId, req.body);
 
+  await AuditService.logAction({
+    userId,
+    action: 'UPDATE_PROFILE',
+    entityType: 'USER',
+    entityId: userId,
+    details: req.body,
+    req,
+  });
+
   res.status(200).json({
     success: true,
-    message: "Profile updated successfully",
+    message: 'Profile updated successfully',
     data: updatedUser,
   });
 });
 
 export const uploadUserAvatar = catchAsync(async (req, res) => {
   if (!req.file) {
-    throw new AppError("No file uploaded", 400);
+    throw new AppError('No file uploaded', 400);
   }
 
   const userId = req.user.userId;
   // Construir la URL completa
   const protocol = req.protocol;
-  const host = req.get("host");
+  const host = req.get('host');
   const avatarUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
 
   const updatedUser = await UserService.updateUser(userId, {
     profile_image: avatarUrl,
   });
 
+  await AuditService.logAction({
+    userId,
+    action: 'UPLOAD_AVATAR',
+    entityType: 'USER',
+    entityId: userId,
+    details: { url: avatarUrl },
+    req,
+  });
+
   res.status(200).json({
     success: true,
-    message: "Avatar uploaded successfully",
+    message: 'Avatar uploaded successfully',
     data: {
       imageUrl: avatarUrl,
       user: updatedUser,
@@ -83,9 +102,18 @@ export const createUser = catchAsync(async (req, res) => {
     lastname,
   });
 
+  await AuditService.logAction({
+    userId: req.user.userId, // Admin creating it (assuming this route is protected)
+    action: 'CREATE_USER',
+    entityType: 'USER',
+    entityId: newUser.id,
+    details: { username, email, role: newUser.role },
+    req,
+  });
+
   res.status(201).json({
     success: true,
-    message: "User created successfully",
+    message: 'User created successfully',
     data: newUser,
   });
 });
@@ -93,9 +121,18 @@ export const createUser = catchAsync(async (req, res) => {
 export const updateUser = catchAsync(async (req, res) => {
   const updatedUser = await UserService.updateUser(req.params.id, req.body);
 
+  await AuditService.logAction({
+    userId: req.user.userId,
+    action: 'UPDATE_USER',
+    entityType: 'USER',
+    entityId: req.params.id,
+    details: req.body,
+    req,
+  });
+
   res.status(200).json({
     success: true,
-    message: "User updated successfully",
+    message: 'User updated successfully',
     data: updatedUser,
   });
 });
@@ -103,9 +140,18 @@ export const updateUser = catchAsync(async (req, res) => {
 export const deleteUser = catchAsync(async (req, res) => {
   await UserRepository.deleteById(req.params.id);
 
+  await AuditService.logAction({
+    userId: req.user.userId,
+    action: 'DELETE_USER',
+    entityType: 'USER',
+    entityId: req.params.id,
+    details: {},
+    req,
+  });
+
   res.status(200).json({
     success: true,
-    message: "User deleted successfully",
+    message: 'User deleted successfully',
   });
 });
 
@@ -130,7 +176,7 @@ export const getUserProjects = catchAsync(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: "User projects fetched successfully",
+    message: 'User projects fetched successfully',
     data: result.rows,
   });
 });
@@ -158,7 +204,7 @@ export const getUserTasks = catchAsync(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: "User tasks fetched successfully",
+    message: 'User tasks fetched successfully',
     data: result.rows,
   });
 });

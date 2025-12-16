@@ -1,6 +1,6 @@
 // src/middleware/security.middleware.js
-import rateLimit from "express-rate-limit";
-import hpp from "hpp";
+import rateLimit from 'express-rate-limit';
+import hpp from 'hpp';
 
 // Rate Limiting
 export const limiter = rateLimit({
@@ -11,7 +11,7 @@ export const limiter = rateLimit({
   message: {
     success: false,
     message:
-      "Too many requests from this IP, please try again after 15 minutes",
+      'Too many requests from this IP, please try again after 15 minutes',
   },
 });
 

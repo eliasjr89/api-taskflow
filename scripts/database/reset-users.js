@@ -1,46 +1,55 @@
-import "dotenv/config";
-import { pool } from "../../src/db/database.js";
-import bcrypt from "bcrypt";
+import 'dotenv/config';
+import { pool } from '../../src/db/database.js';
+import bcrypt from 'bcrypt';
 
 async function resetUsers() {
   try {
-    console.log("🗑️  Limpiando base de datos...\n");
+    console.log('🗑️  Limpiando base de datos...\n');
 
     // 1. Eliminar todos los usuarios (esto eliminará en cascada las relaciones)
-    await pool.query("DELETE FROM users");
-    console.log("✅ Usuarios eliminados");
+    await pool.query('DELETE FROM users');
+    console.log('✅ Usuarios eliminados');
 
     // 2. Resetear el contador de IDs
-    await pool.query("ALTER SEQUENCE users_id_seq RESTART WITH 1");
-    console.log("✅ Secuencia reseteada\n");
+    await pool.query('ALTER SEQUENCE users_id_seq RESTART WITH 1');
+    // También resetear secuencias de proyectos y tareas si existen (para consistencia en tests)
+    try {
+      await pool.query('ALTER SEQUENCE projects_id_seq RESTART WITH 1');
+      await pool.query('ALTER SEQUENCE tasks_id_seq RESTART WITH 1');
+    } catch {
+      console.log(
+        '⚠️  Nota: No se pudieron resetear secuencias de proyectos/tareas (¿quizás no existen aún?)',
+      );
+    }
+    console.log('✅ Secuencias reseteadas\n');
 
     // 3. Crear los 3 usuarios de prueba
-    console.log("👥 Creando usuarios de prueba...\n");
+    console.log('👥 Creando usuarios de prueba...\n');
 
     const users = [
       {
-        username: "admin",
-        email: "admin@taskflow.com",
-        password: "Admin123",
-        name: "Admin",
-        lastname: "TaskFlow",
-        role: "admin",
+        username: 'admin',
+        email: 'admin@taskflow.com',
+        password: 'Admin123',
+        name: 'Admin',
+        lastname: 'TaskFlow',
+        role: 'admin',
       },
       {
-        username: "manager",
-        email: "manager@taskflow.com",
-        password: "Manager123",
-        name: "Manager",
-        lastname: "TaskFlow",
-        role: "manager",
+        username: 'manager',
+        email: 'manager@taskflow.com',
+        password: 'Manager123',
+        name: 'Manager',
+        lastname: 'TaskFlow',
+        role: 'manager',
       },
       {
-        username: "user",
-        email: "user@taskflow.com",
-        password: "User123",
-        name: "User",
-        lastname: "TaskFlow",
-        role: "user",
+        username: 'user',
+        email: 'user@taskflow.com',
+        password: 'User123',
+        name: 'User',
+        lastname: 'TaskFlow',
+        role: 'user',
       },
     ];
 
@@ -58,7 +67,7 @@ async function resetUsers() {
           user.name,
           user.lastname,
           user.role,
-        ]
+        ],
       );
 
       console.log(`✅ ${user.role.toUpperCase().padEnd(8)} creado:`);
@@ -69,27 +78,27 @@ async function resetUsers() {
       console.log(`   Role: ${result.rows[0].role}\n`);
     }
 
-    console.log("╔════════════════════════════════════════════════╗");
-    console.log("║     ✅ BASE DE DATOS RESETEADA EXITOSAMENTE    ║");
-    console.log("╚════════════════════════════════════════════════╝\n");
+    console.log('╔════════════════════════════════════════════════╗');
+    console.log('║     ✅ BASE DE DATOS RESETEADA EXITOSAMENTE    ║');
+    console.log('╚════════════════════════════════════════════════╝\n');
 
-    console.log("📝 Credenciales de acceso:\n");
-    console.log("ADMIN:");
-    console.log("  Email: admin@taskflow.com");
-    console.log("  Password: Admin123\n");
+    console.log('📝 Credenciales de acceso:\n');
+    console.log('ADMIN:');
+    console.log('  Email: admin@taskflow.com');
+    console.log('  Password: Admin123\n');
 
-    console.log("MANAGER:");
-    console.log("  Email: manager@taskflow.com");
-    console.log("  Password: Manager123\n");
+    console.log('MANAGER:');
+    console.log('  Email: manager@taskflow.com');
+    console.log('  Password: Manager123\n');
 
-    console.log("USER:");
-    console.log("  Email: user@taskflow.com");
-    console.log("  Password: User123\n");
+    console.log('USER:');
+    console.log('  Email: user@taskflow.com');
+    console.log('  Password: User123\n');
 
     await pool.end();
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error('❌ Error:', error);
     await pool.end();
     process.exit(1);
   }

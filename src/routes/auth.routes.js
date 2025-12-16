@@ -1,9 +1,9 @@
 // src/routes/auth.routes.js
 
-import { Router } from "express";
-import { login, register } from "../auth/auth.controller.js";
-import { validate } from "../middleware/validate.middleware.js";
-import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
+import { Router } from 'express';
+import { login, register } from '../auth/auth.controller.js';
+import { validateBody } from '../middleware/validate.middleware.js';
+import { loginSchema, createUserSchema } from '../validators/userValidator.js';
 
 const router = Router();
 
@@ -49,7 +49,7 @@ const router = Router();
  *       401:
  *         description: Credenciales inválidas
  */
-router.post("/login", validate(loginSchema), login);
+router.post('/login', validateBody(loginSchema), login);
 
 /**
  * @swagger
@@ -83,6 +83,6 @@ router.post("/login", validate(loginSchema), login);
  *       201:
  *         description: Usuario creado exitosamente
  */
-router.post("/register", validate(registerSchema), register);
+router.post('/register', validateBody(createUserSchema), register);
 
 export default router;

@@ -1,9 +1,9 @@
 // src/schemas/taskStatus.schema.js
-import { z } from "zod";
+import { z } from 'zod';
 
 export const createTaskStatusSchema = z.object({
   body: z.object({
-    name: z.string().min(1, "Name is required"),
+    name: z.string().min(1, 'Name is required'),
   }),
 });
 
@@ -12,7 +12,7 @@ export const updateTaskStatusSchema = z.object({
     id: z.string().transform((val) => parseInt(val, 10)),
   }),
   body: z.object({
-    name: z.string().min(1, "Name is required"),
+    name: z.string().min(1, 'Name is required'),
   }),
 });
 

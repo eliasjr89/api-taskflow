@@ -1,5 +1,5 @@
 // src/routes/tasks.routes.js
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getAllTasks,
   getTaskById,
@@ -12,30 +12,49 @@ import {
   removeTagFromTask,
   getTaskUsers,
   getTaskTags,
-} from "../controllers/taskController.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
+} from '../controllers/taskController.js';
+import { authMiddleware } from '../middleware/auth.middleware.js';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../middleware/validate.middleware.js';
 import {
   createTaskSchema,
   updateTaskSchema,
-  getTaskSchema,
-  getTasksQuerySchema,
   addUsersToTaskSchema,
-  removeUserFromTaskSchema,
   addTagsToTaskSchema,
-  removeTagFromTaskSchema,
-} from "../schemas/task.schema.js";
+} from '../validators/taskValidator.js';
+import Joi from 'joi';
 
 const router = Router();
 
-// Protect all routes
-/**
- * @swagger
- * tags:
- *   name: Tasks
- *   description: Gestión de tareas
- */
+// ID validators
+const idSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+});
 
+const userIdSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+  userId: Joi.number().integer().positive().required(),
+});
+
+const tagIdSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+  tagId: Joi.number().integer().positive().required(),
+});
+
+const querySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(10),
+  project_id: Joi.number().integer().positive(),
+  status_id: Joi.number().integer().positive(),
+  priority: Joi.string().valid('low', 'medium', 'high', 'urgent'),
+  user_id: Joi.number().integer().positive(),
+  tag_id: Joi.number().integer().positive(),
+});
+
+// Protect all routes
 router.use(authMiddleware);
 
 /**
@@ -44,208 +63,76 @@ router.use(authMiddleware);
  *   get:
  *     summary: Obtener todas las tareas
  *     tags: [Tasks]
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Número de página
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Cantidad de tareas por página
- *       - in: query
- *         name: project_id
- *         schema:
- *           type: integer
- *         description: Filtrar por proyecto
- *     responses:
- *       200:
- *         description: Lista de tareas recuperada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: integer
- *                       description:
- *                         type: string
- *                       status:
- *                         type: string
  */
-router.get("/", validate(getTasksQuerySchema), getAllTasks);
+router.get('/', validateQuery(querySchema), getAllTasks);
+
 /**
  * @swagger
  * /tasks/{id}:
  *   get:
  *     summary: Obtener tarea por ID
  *     tags: [Tasks]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Tarea encontrada
- *       404:
- *         description: Tarea no encontrada
  */
-router.get("/:id", validate(getTaskSchema), getTaskById);
+router.get('/:id', validateParams(idSchema), getTaskById);
+
 /**
  * @swagger
  * /tasks:
  *   post:
  *     summary: Crear una nueva tarea
  *     tags: [Tasks]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - description
- *               - project_id
- *               - status_id
- *             properties:
- *               description:
- *                 type: string
- *               project_id:
- *                 type: integer
- *               status_id:
- *                 type: integer
- *               priority:
- *                 type: string
- *                 enum: [low, medium, high, critical]
- *               due_date:
- *                 type: string
- *                 format: date-time
- *     responses:
- *       201:
- *         description: Tarea creada exitosamente
  */
-router.post("/", validate(createTaskSchema), createTask);
+router.post('/', validateBody(createTaskSchema), createTask);
+
 /**
  * @swagger
  * /tasks/{id}:
  *   put:
  *     summary: Actualizar tarea
  *     tags: [Tasks]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               description:
- *                 type: string
- *               project_id:
- *                 type: integer
- *               status_id:
- *                 type: integer
- *               priority:
- *                 type: string
- *               completed:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Tarea actualizada
- *       404:
- *         description: Tarea no encontrada
  */
-router.put("/:id", validate(updateTaskSchema), updateTask);
+router.put(
+  '/:id',
+  validateParams(idSchema),
+  validateBody(updateTaskSchema),
+  updateTask,
+);
+
 /**
  * @swagger
  * /tasks/{id}:
  *   delete:
- *     summary: Eliminar tarea (Soft Delete)
+ *     summary: Eliminar tarea
  *     tags: [Tasks]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Tarea eliminada
- *       404:
- *         description: Tarea no encontrada
  */
-router.delete("/:id", validate(getTaskSchema), deleteTask);
+router.delete('/:id', validateParams(idSchema), deleteTask);
 
-// Task Members
-/**
- * @swagger
- * /tasks/{id}/users:
- *   get:
- *     summary: Obtener usuarios asignados a la tarea
- *     tags: [Tasks]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Lista de usuarios de la tarea
- *       404:
- *         description: Tarea no encontrada
- */
-router.get("/:id/users", validate(getTaskSchema), getTaskUsers);
-router.post("/:id/users", validate(addUsersToTaskSchema), addUsersToTask);
+// Task Users
+router.get('/:id/users', validateParams(idSchema), getTaskUsers);
+router.post(
+  '/:id/users',
+  validateParams(idSchema),
+  validateBody(addUsersToTaskSchema),
+  addUsersToTask,
+);
 router.delete(
-  "/:id/users/:userId",
-  validate(removeUserFromTaskSchema),
-  removeUserFromTask
+  '/:id/users/:userId',
+  validateParams(userIdSchema),
+  removeUserFromTask,
 );
 
 // Task Tags
-/**
- * @swagger
- * /tasks/{id}/tags:
- *   get:
- *     summary: Obtener etiquetas de la tarea
- *     tags: [Tasks]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Lista de etiquetas de la tarea
- *       404:
- *         description: Tarea no encontrada
- */
-router.get("/:id/tags", validate(getTaskSchema), getTaskTags);
-router.post("/:id/tags", validate(addTagsToTaskSchema), addTagsToTask);
+router.get('/:id/tags', validateParams(idSchema), getTaskTags);
+router.post(
+  '/:id/tags',
+  validateParams(idSchema),
+  validateBody(addTagsToTaskSchema),
+  addTagsToTask,
+);
 router.delete(
-  "/:id/tags/:tagId",
-  validate(removeTagFromTaskSchema),
-  removeTagFromTask
+  '/:id/tags/:tagId',
+  validateParams(tagIdSchema),
+  removeTagFromTask,
 );
 
 export default router;

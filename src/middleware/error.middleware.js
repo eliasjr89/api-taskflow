@@ -1,10 +1,5 @@
 // src/middleware/error.middleware.js
-import { AppError } from "../utils/AppError.js";
-
-const handleCastErrorDB = (err) => {
-  const message = `Invalid ${err.path}: ${err.value}.`;
-  return new AppError(message, 400);
-};
+import { AppError } from '../utils/AppError.js';
 
 const handleDuplicateFieldsDB = (err) => {
   const value = err.detail.match(/(["'])(\\?.)*?\1/)[0];
@@ -32,28 +27,29 @@ const sendErrorProd = (err, res) => {
     });
   } else {
     // Programming or other unknown error: don't leak error details
-    console.error("ERROR 💥", err);
+    console.error('ERROR 💥', err);
     res.status(500).json({
       success: false,
-      status: "error",
-      message: "Something went very wrong!",
+      status: 'error',
+      message: 'Something went very wrong!',
     });
   }
 };
 
-export const globalErrorHandler = (err, req, res, next) => {
+export const globalErrorHandler = (err, req, res, _next) => {
   err.statusCode = err.statusCode || 500;
-  err.status = err.status || "error";
+  err.status = err.status || 'error';
 
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === 'development') {
     sendErrorDev(err, res);
   } else {
     let error = { ...err };
     error.message = err.message;
 
     // Postgres specific error codes can be handled here
-    if (error.code === "23505") error = handleDuplicateFieldsDB(error);
-    // if (error.name === 'CastError') error = handleCastErrorDB(error);
+    if (error.code === '23505') {
+      error = handleDuplicateFieldsDB(error);
+    }
 
     sendErrorProd(error, res);
   }

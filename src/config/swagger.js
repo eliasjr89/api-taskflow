@@ -1,36 +1,36 @@
 // src/config/swagger.js
-import swaggerJSDoc from "swagger-jsdoc";
+import swaggerJSDoc from 'swagger-jsdoc';
 
 const options = {
   definition: {
-    openapi: "3.0.0",
+    openapi: '3.0.0',
     info: {
-      title: "TaskFlow API",
-      version: "1.0.0",
+      title: 'TaskFlow API',
+      version: '1.0.0',
       description:
-        "API profesional para la gestión de tareas, usuarios y proyectos.",
+        'API profesional para la gestión de tareas, usuarios y proyectos.',
       contact: {
-        name: "Support",
+        name: 'Support',
       },
     },
     components: {
       securitySchemes: {
         bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
         },
       },
       schemas: {
         Error: {
-          type: "object",
+          type: 'object',
           properties: {
             success: {
-              type: "boolean",
+              type: 'boolean',
               example: false,
             },
             message: {
-              type: "string",
+              type: 'string',
             },
           },
         },
@@ -43,12 +43,12 @@ const options = {
     ],
     servers: [
       {
-        url: "http://localhost:3000/taskflow",
-        description: "Servidor de Desarrollo",
+        url: 'http://localhost:3000/taskflow',
+        description: 'Servidor de Desarrollo',
       },
     ],
   },
-  apis: ["./src/routes/*.js"], // Scan routes for JSDoc
+  apis: ['./src/routes/*.js'], // Scan routes for JSDoc
 };
 
 export const swaggerSpec = swaggerJSDoc(options);

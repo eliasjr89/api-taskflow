@@ -1,18 +1,18 @@
 // src/schemas/task.schema.js
-import { z } from "zod";
+import { z } from 'zod';
 
 export const createTaskSchema = z.object({
   body: z.object({
-    description: z.string().min(1, "Description is required"),
+    description: z.string().min(1, 'Description is required'),
     project_id: z
       .number()
       .int()
-      .positive("Project ID must be a positive integer"),
+      .positive('Project ID must be a positive integer'),
     status_id: z
       .number()
       .int()
-      .positive("Status ID must be a positive integer"),
-    priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+      .positive('Status ID must be a positive integer'),
+    priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
     completed: z.boolean().optional(),
     due_date: z.string().datetime().optional().nullable(),
     user_ids: z.array(z.number().int()).optional(),
@@ -28,7 +28,7 @@ export const updateTaskSchema = z.object({
     description: z.string().min(1).optional(),
     project_id: z.number().int().positive().optional(),
     status_id: z.number().int().positive().optional(),
-    priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+    priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
     completed: z.boolean().optional(),
     due_date: z.string().datetime().optional().nullable(),
     user_ids: z.array(z.number().int()).optional(),
@@ -56,7 +56,7 @@ export const getTasksQuerySchema = z.object({
       .string()
       .transform((val) => parseInt(val, 10))
       .optional(),
-    priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+    priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
     tag_id: z
       .string()
       .transform((val) => parseInt(val, 10))
@@ -65,12 +65,12 @@ export const getTasksQuerySchema = z.object({
       .string()
       .transform((val) => parseInt(val, 10))
       .optional()
-      .default("1"),
+      .default('1'),
     limit: z
       .string()
       .transform((val) => parseInt(val, 10))
       .optional()
-      .default("10"),
+      .default('10'),
   }),
 });
 

@@ -1,7 +1,7 @@
 // src/services/taskService.js
-import { pool } from "../db/database.js";
-import * as TaskRepository from "../repositories/taskRepository.js";
-import { AppError } from "../utils/AppError.js";
+import { pool } from '../db/database.js';
+import * as TaskRepository from '../repositories/taskRepository.js';
+import { AppError } from '../utils/AppError.js';
 
 export const getAllTasks = async (filters) => {
   const page = filters.page || 1;
@@ -28,7 +28,7 @@ export const getAllTasks = async (filters) => {
 export const getTaskById = async (id) => {
   const task = await TaskRepository.findById(id);
   if (!task) {
-    throw new AppError("Task not found", 404);
+    throw new AppError('Task not found', 404);
   }
   return task;
 };
@@ -36,32 +36,36 @@ export const getTaskById = async (id) => {
 export const createTask = async (data) => {
   const client = await pool.connect();
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     // Validations
     const projectExists = await TaskRepository.checkProjectExists(
       data.project_id,
-      client
+      client,
     );
-    if (!projectExists) throw new AppError("Project not found", 404);
+    if (!projectExists) {
+      throw new AppError('Project not found', 404);
+    }
 
     const statusExists = await TaskRepository.checkStatusExists(
       data.status_id,
-      client
+      client,
     );
-    if (!statusExists) throw new AppError("Status not found", 404);
+    if (!statusExists) {
+      throw new AppError('Status not found', 404);
+    }
 
     if (
       data.user_ids &&
       !(await TaskRepository.checkUsersExist(data.user_ids, client))
     ) {
-      throw new AppError("One or more users not found", 404);
+      throw new AppError('One or more users not found', 404);
     }
     if (
       data.tag_ids &&
       !(await TaskRepository.checkTagsExist(data.tag_ids, client))
     ) {
-      throw new AppError("One or more tags not found", 404);
+      throw new AppError('One or more tags not found', 404);
     }
 
     // Create Task
@@ -75,11 +79,11 @@ export const createTask = async (data) => {
       await TaskRepository.addTags(newTask.id, data.tag_ids, client);
     }
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
     // Return full task with relations
     return await TaskRepository.findById(newTask.id); // Uses default pool, it's fine as committed
   } catch (error) {
-    await client.query("ROLLBACK");
+    await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
@@ -89,23 +93,27 @@ export const createTask = async (data) => {
 export const updateTask = async (id, data) => {
   const client = await pool.connect();
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     // Check existence
     const existingTask = await TaskRepository.findById(id, client);
-    if (!existingTask) throw new AppError("Task not found", 404);
+    if (!existingTask) {
+      throw new AppError('Task not found', 404);
+    }
 
     if (
       data.user_ids &&
       !(await TaskRepository.checkUsersExist(data.user_ids, client))
-    )
-      throw new AppError("One or more users not found", 404);
+    ) {
+      throw new AppError('One or more users not found', 404);
+    }
 
     if (
       data.tag_ids &&
       !(await TaskRepository.checkTagsExist(data.tag_ids, client))
-    )
-      throw new AppError("One or more tags not found", 404);
+    ) {
+      throw new AppError('One or more tags not found', 404);
+    }
 
     // Update Task
     await TaskRepository.update(id, data, client);
@@ -124,10 +132,10 @@ export const updateTask = async (id, data) => {
       }
     }
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
     return await TaskRepository.findById(id);
   } catch (error) {
-    await client.query("ROLLBACK");
+    await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
@@ -135,53 +143,65 @@ export const updateTask = async (id, data) => {
 };
 
 export const deleteTask = async (id) => {
-  const deletedTask = await TaskRepository.deleteSoft(id);
+  const deletedTask = await TaskRepository.deleteById(id);
   if (!deletedTask) {
-    throw new AppError("Task not found", 404);
+    throw new AppError('Task not found', 404);
   }
   return deletedTask;
 };
 
 export const addUsersToTask = async (id, userIds) => {
   const task = await TaskRepository.findById(id);
-  if (!task) throw new AppError("Task not found", 404);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
 
   if (!(await TaskRepository.checkUsersExist(userIds))) {
-    throw new AppError("One or more users not found", 400);
+    throw new AppError('One or more users not found', 400);
   }
   await TaskRepository.addUsers(id, userIds);
 };
 
 export const removeUserFromTask = async (id, userId) => {
   const task = await TaskRepository.findById(id);
-  if (!task) throw new AppError("Task not found", 404);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
   await TaskRepository.removeUser(id, userId);
 };
 
 export const addTagsToTask = async (id, tagIds) => {
   const task = await TaskRepository.findById(id);
-  if (!task) throw new AppError("Task not found", 404);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
 
   if (!(await TaskRepository.checkTagsExist(tagIds))) {
-    throw new AppError("One or more tags not found", 400);
+    throw new AppError('One or more tags not found', 400);
   }
   await TaskRepository.addTags(id, tagIds);
 };
 
 export const removeTagFromTask = async (id, tagId) => {
   const task = await TaskRepository.findById(id);
-  if (!task) throw new AppError("Task not found", 404);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
   await TaskRepository.removeTag(id, tagId);
 };
 
 export const getTaskUsers = async (id) => {
   const task = await TaskRepository.findById(id);
-  if (!task) throw new AppError("Task not found", 404);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
   return await TaskRepository.getTaskUsers(id);
 };
 
 export const getTaskTags = async (id) => {
   const task = await TaskRepository.findById(id);
-  if (!task) throw new AppError("Task not found", 404);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
   return await TaskRepository.getTaskTags(id);
 };
