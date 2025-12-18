@@ -16,18 +16,18 @@ export const findByName = async (name, client = pool) => {
   return result.rows[0];
 };
 
-export const create = async (name, client = pool) => {
+export const create = async (name, color, client = pool) => {
   const result = await client.query(
-    'INSERT INTO tags (name) VALUES ($1) RETURNING *',
-    [name],
+    'INSERT INTO tags (name, color) VALUES ($1, $2) RETURNING *',
+    [name, color || 'blue'],
   );
   return result.rows[0];
 };
 
-export const update = async (id, name, client = pool) => {
+export const update = async (id, name, color, client = pool) => {
   const result = await client.query(
-    'UPDATE tags SET name=COALESCE($1,name), updated_at=NOW() WHERE id=$2 RETURNING *',
-    [name, id],
+    'UPDATE tags SET name=COALESCE($1,name), color=COALESCE($2,color), updated_at=NOW() WHERE id=$3 RETURNING *',
+    [name, color, id],
   );
   return result.rows[0];
 };

@@ -21,7 +21,7 @@ export const createTag = async (data) => {
     throw new AppError('Tag name already exists', 409);
   }
 
-  return await TagRepository.create(data.name);
+  return await TagRepository.create(data.name, data.color);
 };
 
 export const updateTag = async (id, data) => {
@@ -35,7 +35,7 @@ export const updateTag = async (id, data) => {
     throw new AppError('Tag name already exists', 409);
   }
 
-  return await TagRepository.update(id, data.name);
+  return await TagRepository.update(id, data.name, data.color);
 };
 
 export const deleteTag = async (id) => {
