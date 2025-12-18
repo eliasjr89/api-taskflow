@@ -43,10 +43,11 @@ export const uploadUserAvatar = catchAsync(async (req, res) => {
   }
 
   const userId = req.user.userId;
-  // Construir la URL completa
-  const protocol = req.protocol;
-  const host = req.get('host');
-  const avatarUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+
+  // Convert buffer to Base64
+  const b64 = Buffer.from(req.file.buffer).toString('base64');
+  const mimeType = req.file.mimetype;
+  const avatarUrl = `data:${mimeType};base64,${b64}`;
 
   const updatedUser = await UserService.updateUser(userId, {
     profile_image: avatarUrl,
@@ -57,7 +58,7 @@ export const uploadUserAvatar = catchAsync(async (req, res) => {
     action: 'UPLOAD_AVATAR',
     entityType: 'USER',
     entityId: userId,
-    details: { url: avatarUrl },
+    details: { size: req.file.size, mimeType },
     req,
   });
 

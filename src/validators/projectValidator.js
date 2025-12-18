@@ -11,6 +11,9 @@ export const createProjectSchema = Joi.object({
   description: Joi.string().max(500).allow(null, '').messages({
     'string.max': 'La descripción no puede exceder 500 caracteres',
   }),
+
+  color: Joi.string().max(50).allow(null, '').optional(),
+  icon: Joi.string().max(50).allow(null, '').optional(),
 });
 
 export const updateProjectSchema = Joi.object({
@@ -22,6 +25,9 @@ export const updateProjectSchema = Joi.object({
   description: Joi.string().max(500).allow(null, '').messages({
     'string.max': 'La descripción no puede exceder 500 caracteres',
   }),
+
+  color: Joi.string().max(50).allow(null, '').optional(),
+  icon: Joi.string().max(50).allow(null, '').optional(),
 })
   .min(1)
   .messages({

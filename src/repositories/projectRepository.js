@@ -32,33 +32,39 @@ export const findById = async (id, client = pool) => {
 };
 
 export const create = async (projectData, creatorId, client = pool) => {
-  const { name, description } = projectData;
+  const { name, description, color, icon } = projectData;
   const query = `
-      INSERT INTO projects (name, description, creator_id, created_at)
-      VALUES ($1, $2, $3, NOW())
+      INSERT INTO projects (name, description, color, icon, creator_id, created_at)
+      VALUES ($1, $2, $3, $4, $5, NOW())
       RETURNING *
     `;
   const result = await client.query(query, [
     name,
     description || null,
+    color || 'indigo',
+    icon || 'Folder',
     creatorId,
   ]);
   return result.rows[0];
 };
 
 export const update = async (id, projectData, client = pool) => {
-  const { name, description } = projectData;
+  const { name, description, color, icon } = projectData;
   const query = `
       UPDATE projects SET
         name = COALESCE($1, name),
         description = COALESCE($2, description),
+        color = COALESCE($3, color),
+        icon = COALESCE($4, icon),
         updated_at = NOW()
-      WHERE id = $3
+      WHERE id = $5
       RETURNING *
     `;
   const result = await client.query(query, [
     name || null,
     description || null,
+    color,
+    icon,
     id,
   ]);
   return result.rows[0];
