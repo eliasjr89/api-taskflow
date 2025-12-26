@@ -1,0 +1,32 @@
+Note: Unnecessary use of -X or --request, GET is already inferred.
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+> GET /taskflow/user/profile HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzY2NzYwODYyLCJleHAiOjE3NjY3NjQ0NjJ9.Xk5yScYhfLuJycwgbFFHuZ03XfSrN23wIHh_HG--IPc
+> 
+< HTTP/1.1 200 OK
+< X-Powered-By: Express
+< Vary: Origin
+< Access-Control-Allow-Credentials: true
+< RateLimit-Policy: 1000;w=900
+< RateLimit-Limit: 1000
+< RateLimit-Remaining: 994
+< RateLimit-Reset: 868
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 276
+< Date: Fri, 26 Dec 2025 14:54:24 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [276 bytes data]
+100   276  100   276    0     0    950      0 --:--:-- --:--:-- --:--:--   951
+* Connection #0 to host localhost left intact
+{"success":true,"data":{"id":3,"username":"user","name":"User","lastname":"TaskFlow","email":"user@taskflow.com","role":"user","profile_image":null,"created_at":"2025-12-23T19:02:11.770Z","bio":"Verified via cURL","location":"Madrid, Spain","website":"https://curl-test.com"}}

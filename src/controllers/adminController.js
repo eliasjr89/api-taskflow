@@ -1,43 +1,43 @@
-import { pool } from '../db/database.js';
-import bcrypt from 'bcrypt';
-import { catchAsync } from '../utils/catchAsync.js';
-import * as AuditService from '../services/auditService.js';
+import { pool } from "../db/database.js";
+import bcrypt from "bcrypt";
+import { catchAsync } from "../utils/catchAsync.js";
+import * as AuditService from "../services/auditService.js";
 
 export const resetDatabase = catchAsync(async (req, res) => {
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     // 1. Limpiar datos (orden importante por integridad referencial)
     await client.query(
-      'TRUNCATE TABLE tasks_tags, tasks_users, projects_users, tasks, projects, users RESTART IDENTITY CASCADE',
+      "TRUNCATE TABLE tasks_tags, tasks_users, projects_users, tasks, projects, users RESTART IDENTITY CASCADE"
     );
 
     // 2. Crear usuarios base
     const users = [
       {
-        username: 'admin',
-        email: 'admin@taskflow.com',
-        password: 'Admin123',
-        name: 'Admin',
-        lastname: 'TaskFlow',
-        role: 'admin',
+        username: "admin",
+        email: "admin@taskflow.com",
+        password: "Admin123",
+        name: "Admin",
+        lastname: "TaskFlow",
+        role: "admin",
       },
       {
-        username: 'manager',
-        email: 'manager@taskflow.com',
-        password: 'Manager123',
-        name: 'Manager',
-        lastname: 'TaskFlow',
-        role: 'manager',
+        username: "manager",
+        email: "manager@taskflow.com",
+        password: "Manager123",
+        name: "Manager",
+        lastname: "TaskFlow",
+        role: "manager",
       },
       {
-        username: 'user',
-        email: 'user@taskflow.com',
-        password: 'User123',
-        name: 'User',
-        lastname: 'TaskFlow',
-        role: 'user',
+        username: "user",
+        email: "user@taskflow.com",
+        password: "User123",
+        name: "User",
+        lastname: "TaskFlow",
+        role: "user",
       },
     ];
 
@@ -53,19 +53,19 @@ export const resetDatabase = catchAsync(async (req, res) => {
           user.name,
           user.lastname,
           user.role,
-        ],
+        ]
       );
     }
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
 
     res.status(200).json({
       success: true,
       message:
-        'Base de datos reseteada correctamente. Usuarios por defecto creados.',
+        "Base de datos reseteada correctamente. Usuarios por defecto creados.",
     });
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();
@@ -77,7 +77,7 @@ export const getDatabaseStats = catchAsync(async (req, res) => {
   try {
     // 1. DB Size
     const sizeRes = await client.query(
-      'SELECT pg_size_pretty(pg_database_size(current_database())) as size',
+      "SELECT pg_size_pretty(pg_database_size(current_database())) as size"
     );
     const dbSize = sizeRes.rows[0].size;
 
@@ -89,11 +89,11 @@ export const getDatabaseStats = catchAsync(async (req, res) => {
 
     // Parallelize queries
     const [usersRes, projectsRes, tasksRes, pendingRes] = await Promise.all([
-      client.query('SELECT COUNT(*) FROM users'),
-      client.query('SELECT COUNT(*) FROM projects'),
-      client.query('SELECT COUNT(*) FROM tasks'),
+      client.query("SELECT COUNT(*) FROM users"),
+      client.query("SELECT COUNT(*) FROM projects"),
+      client.query("SELECT COUNT(*) FROM tasks"),
       client.query(
-        "SELECT COUNT(*) FROM tasks WHERE status_id != 3 AND status_id != (SELECT id FROM task_statuses WHERE name ILIKE '%complete%' LIMIT 1)",
+        "SELECT COUNT(*) FROM tasks WHERE status_id != 3 AND status_id != (SELECT id FROM task_statuses WHERE name ILIKE '%complete%' LIMIT 1)"
       ), // Assuming 3 is complete, or checking dynamic
     ]);
 
@@ -109,6 +109,15 @@ export const getDatabaseStats = catchAsync(async (req, res) => {
       success: true,
       data: {
         total_size: dbSize,
+        version: (await client.query("SELECT version()")).rows[0].version,
+        uptime: (
+          await client.query(
+            "SELECT now() - pg_postmaster_start_time() as uptime"
+          )
+        ).rows[0].uptime,
+        active_connections: (
+          await client.query("SELECT count(*) FROM pg_stat_activity")
+        ).rows[0].count,
         rows: {
           users: parseInt(usersRes.rows[0].count),
           projects: parseInt(projectsRes.rows[0].count),
@@ -123,6 +132,14 @@ export const getDatabaseStats = catchAsync(async (req, res) => {
   } finally {
     client.release();
   }
+});
+
+export const clearAuditLogs = catchAsync(async (req, res) => {
+  await AuditService.clearLogs();
+  res.status(200).json({
+    success: true,
+    message: "Audit logs cleared successfully",
+  });
 });
 
 export const getAuditLogs = catchAsync(async (req, res) => {

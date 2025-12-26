@@ -1,71 +1,84 @@
 // src/repositories/userRepository.js
-import { pool } from '../db/database.js';
+import { pool } from "../db/database.js";
 
 // Export pool for direct queries in controllers when needed
 export { pool };
 
 export const findAll = async (client = pool) => {
   const result = await client.query(
-    'SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at FROM users ORDER BY id ASC',
+    "SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at, bio, location, website FROM users ORDER BY id ASC"
   );
   return result.rows;
 };
 
 export const findByEmail = async (email, client = pool) => {
-  const result = await client.query('SELECT * FROM users WHERE email = $1', [
-    email,
-  ]);
+  const query =
+    "SELECT id, username, name, lastname, email, password, role, profile_image, created_at, bio, location, website FROM users WHERE email = $1";
+  const result = await client.query(query, [email]);
   return result.rows[0];
 };
 
 export const findById = async (id, client = pool) => {
-  const result = await client.query(
-    'SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at FROM users WHERE id = $1',
-    [id],
-  );
+  const query =
+    "SELECT id, username, name, lastname, email, role, profile_image, created_at, bio, location, website FROM users WHERE id = $1";
+  const result = await client.query(query, [id]);
   return result.rows[0];
 };
 
 export const findByUsername = async (username, client = pool) => {
-  const result = await client.query('SELECT * FROM users WHERE username = $1', [
-    username,
-  ]);
+  const query =
+    "SELECT id, username, name, lastname, email, password, role, profile_image, created_at, bio, location, website FROM users WHERE username = $1";
+  const result = await client.query(query, [username]);
   return result.rows[0];
 };
 
 export const create = async (userData, client = pool) => {
-  const { username, name, lastname, email, password } = userData;
+  const { username, name, lastname, email, password, role } = userData;
   const query = `
-      INSERT INTO users (username, name, lastname, email, password, created_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      INSERT INTO users (username, name, lastname, email, password, role, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
       RETURNING id, username, name, lastname, email, role, created_at
     `;
-  const values = [username, name || null, lastname || null, email, password];
+  const values = [
+    username,
+    name || null,
+    lastname || null,
+    email,
+    password,
+    role || "user",
+  ];
   const result = await client.query(query, values);
   return result.rows[0];
 };
 
 export const update = async (id, userData, client = pool) => {
-  const { username, name, lastname, email, password, profile_image } = userData;
+  const { username, name, lastname, password, role, bio, location, website } =
+    userData;
   const query = `
       UPDATE users SET
         username = COALESCE($1, username),
         name = COALESCE($2, name),
         lastname = COALESCE($3, lastname),
-        email = COALESCE($4, email),
-        password = COALESCE($5, password),
-        profile_image = COALESCE($6, profile_image),
+        password = COALESCE($4, password),
+        role = COALESCE($5, role),
+        bio = COALESCE($6, bio),
+        location = COALESCE($7, location),
+        website = COALESCE($8, website),
+        profile_image = COALESCE($9, profile_image),
         updated_at = NOW()
-      WHERE id = $7
-      RETURNING id, username, name, lastname, email, role, profile_image, updated_at
+      WHERE id = $10
+      RETURNING id, username, name, lastname, email, role, created_at, bio, location, website, profile_image
     `;
   const values = [
     username || null,
     name || null,
     lastname || null,
-    email || null,
     password || null,
-    profile_image || null,
+    role || null,
+    bio || null,
+    location || null,
+    website || null,
+    userData.profile_image || null,
     id,
   ];
   const result = await client.query(query, values);
@@ -74,8 +87,8 @@ export const update = async (id, userData, client = pool) => {
 
 export const deleteById = async (id, client = pool) => {
   const result = await client.query(
-    'DELETE FROM users WHERE id=$1 RETURNING id',
-    [id],
+    "DELETE FROM users WHERE id=$1 RETURNING id",
+    [id]
   );
   return result.rows[0];
 };

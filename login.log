@@ -1,0 +1,35 @@
+Note: Unnecessary use of -X or --request, POST is already inferred.
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+> POST /taskflow/auth/login HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 57
+> 
+} [57 bytes data]
+100    57    0     0  100    57      0    279 --:--:-- --:--:-- --:--:--   279< HTTP/1.1 200 OK
+< X-Powered-By: Express
+< Vary: Origin
+< Access-Control-Allow-Credentials: true
+< RateLimit-Policy: 1000;w=900
+< RateLimit-Limit: 1000
+< RateLimit-Remaining: 998
+< RateLimit-Reset: 893
+< Set-Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzY2NzYwODM5LCJleHAiOjE3NjY3NjQ0Mzl9.03Rk0JhNZ6rSIxFCNjIIpUbC5NNW6c3pauXhbzwouK8; Path=/; Expires=Sat, 27 Dec 2025 14:53:59 GMT; HttpOnly; SameSite=Lax
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 284
+< Date: Fri, 26 Dec 2025 14:53:59 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [284 bytes data]
+100   341  100   284  100    57    591    118 --:--:-- --:--:-- --:--:--   708
+* Connection #0 to host localhost left intact
+{"success":true,"message":"Login successful","data":{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzY2NzYwODM5LCJleHAiOjE3NjY3NjQ0Mzl9.03Rk0JhNZ6rSIxFCNjIIpUbC5NNW6c3pauXhbzwouK8","user":{"id":3,"email":"user@taskflow.com","role":"user"}}}

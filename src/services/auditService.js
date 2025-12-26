@@ -1,5 +1,5 @@
 // src/services/auditService.js
-import { pool } from '../db/database.js';
+import { pool } from "../db/database.js";
 
 /**
  * Log an activity to the audit_logs table.
@@ -21,16 +21,16 @@ export const logAction = async ({
 }) => {
   try {
     const ipAddress = req
-      ? req.headers['x-forwarded-for'] || req.socket.remoteAddress
+      ? req.headers["x-forwarded-for"] || req.socket.remoteAddress
       : null;
 
     await pool.query(
       `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, action, entityType, entityId, details, ipAddress],
+      [userId, action, entityType, entityId, details, ipAddress]
     );
   } catch (error) {
-    console.error('FAILED TO LOG AUDIT:', error);
+    console.error("FAILED TO LOG AUDIT:", error);
     // Don't throw, we don't want to break the main flow if logging fails
   }
 };
@@ -49,4 +49,11 @@ export const getRecentLogs = async (limit = 50) => {
   `;
   const res = await pool.query(query, [limit]);
   return res.rows;
+};
+
+/**
+ * Clear all audit logs.
+ */
+export const clearLogs = async () => {
+  await pool.query("TRUNCATE TABLE audit_logs");
 };
