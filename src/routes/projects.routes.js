@@ -19,19 +19,10 @@ import {
 import {
   createProjectSchema,
   updateProjectSchema,
+  getProjectSchema,
   addUsersToProjectSchema,
-} from '../validators/projectValidator.js';
-import Joi from 'joi';
-
-// Simple ID validator
-const idSchema = Joi.object({
-  id: Joi.number().integer().positive().required(),
-});
-
-const userIdSchema = Joi.object({
-  id: Joi.number().integer().positive().required(),
-  userId: Joi.number().integer().positive().required(),
-});
+  removeUserFromProjectSchema,
+} from '../schemas/project.schema.js';
 
 const router = Router();
 
@@ -74,7 +65,7 @@ router.get('/', getAllProjects);
  *       404:
  *         description: Proyecto no encontrado
  */
-router.get('/:id', validateParams(idSchema), getProjectById);
+router.get('/:id', validateParams(getProjectSchema), getProjectById);
 
 /**
  * @swagger
@@ -137,12 +128,7 @@ router.post('/', validateBody(createProjectSchema), createProject);
  *       200:
  *         description: Proyecto actualizado
  */
-router.put(
-  '/:id',
-  validateParams(idSchema),
-  validateBody(updateProjectSchema),
-  updateProject,
-);
+router.put('/:id', validateParams(updateProjectSchema), updateProject);
 
 /**
  * @swagger
@@ -160,19 +146,18 @@ router.put(
  *       200:
  *         description: Proyecto eliminado
  */
-router.delete('/:id', validateParams(idSchema), deleteProject);
+router.delete('/:id', validateParams(getProjectSchema), deleteProject);
 
 // Project Members
-router.get('/:id/users', validateParams(idSchema), getProjectUsers);
+router.get('/:id/users', validateParams(getProjectSchema), getProjectUsers);
 router.post(
   '/:id/users',
-  validateParams(idSchema),
   validateBody(addUsersToProjectSchema),
   addUsersToProject,
 );
 router.delete(
   '/:id/users/:userId',
-  validateParams(userIdSchema),
+  validateParams(removeUserFromProjectSchema),
   removeUserFromProject,
 );
 
@@ -195,6 +180,6 @@ router.delete(
  *       404:
  *         description: Proyecto no encontrado
  */
-router.get('/:id/tasks', validateParams(idSchema), getProjectTasks);
+router.get('/:id/tasks', validateParams(getProjectSchema), getProjectTasks);
 
 export default router;

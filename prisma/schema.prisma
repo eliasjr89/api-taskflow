@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  email        String   @unique
+  password     String
+  name         String?
+  lastname     String?
+  role         String   @default("user")
+  bio          String?
+  location     String?
+  website      String?
+  profileImage String?  @map("profile_image")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  createdProjects Project[]         @relation("CreatedProjects")
+  projects        ProjectsOnUsers[]
+  tasks           TasksOnUsers[]
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  creatorId   Int      @map("creator_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  creator User              @relation("CreatedProjects", fields: [creatorId], references: [id])
+  users   ProjectsOnUsers[]
+  tasks   Task[]
+
+  @@map("projects")
+}
+
+model ProjectsOnUsers {
+  projectId Int @map("project_id")
+  userId    Int @map("user_id")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@map("projects_users")
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  description String
+  projectId   Int?      @map("project_id")
+  statusId    Int?      @map("status_id")
+  priority    String? // 'high', 'medium', 'low'
+  dueDate     DateTime? @map("due_date")
+  completed   Boolean   @default(false)
+  deleted     Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  project Project?      @relation(fields: [projectId], references: [id])
+  status  TaskStatus?   @relation(fields: [statusId], references: [id])
+  users   TasksOnUsers[]
+  tags    TasksOnTags[]
+
+  @@map("tasks")
+}
+
+model TasksOnUsers {
+  taskId Int @map("task_id")
+  userId Int @map("user_id")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@map("tasks_users")
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  color     String   @default("blue")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tasks TasksOnTags[]
+
+  @@map("tags")
+}
+
+model TasksOnTags {
+  taskId Int @map("task_id")
+  tagId  Int @map("tag_id")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+  @@map("tasks_tags")
+}
+
+model TaskStatus {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tasks Task[]
+
+  @@map("task_statuses")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   Int      @map("entity_id")
+  details    Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}

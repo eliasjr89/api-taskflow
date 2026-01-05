@@ -5,6 +5,42 @@ async function seedDatabase() {
   try {
     console.log('🌱 Poblando base de datos con datos de prueba...\n');
 
+    // 0. CREAR DATOS DE REFERENCIA (STATUSES Y TAGS)
+    console.log('📚 Creando datos de referencia...');
+
+    const statuses = [
+      { id: 1, name: 'pending' },
+      { id: 2, name: 'in_progress' },
+      { id: 3, name: 'review' },
+      { id: 4, name: 'completed' },
+    ];
+
+    for (const status of statuses) {
+      await pool.query(
+        'INSERT INTO task_statuses (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING',
+        [status.id, status.name],
+      );
+    }
+    console.log(`   ✅ ${statuses.length} estados creados`);
+
+    const tags = [
+      { id: 1, name: 'frontend' },
+      { id: 2, name: 'backend' },
+      { id: 3, name: 'urgent' },
+      { id: 4, name: 'bug' },
+      { id: 5, name: 'feature' },
+      { id: 6, name: 'ui' },
+      { id: 7, name: 'api' },
+    ];
+
+    for (const tag of tags) {
+      await pool.query(
+        'INSERT INTO tags (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING',
+        [tag.id, tag.name],
+      );
+    }
+    console.log(`   ✅ ${tags.length} etiquetas creadas\n`);
+
     // 1. CREAR PROYECTOS
     console.log('📁 Creando proyectos...');
 
@@ -34,31 +70,42 @@ async function seedDatabase() {
     const projectIds = [];
     for (const project of projects) {
       const result = await pool.query(
-        'INSERT INTO projects (name, description, creator_id) VALUES ($1, $2, $3) RETURNING id',
+        'INSERT INTO projects (name, description, creator_id, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id',
         [project.name, project.description, project.creator_id],
       );
       projectIds.push(result.rows[0].id);
       console.log(`   ✅ ${project.name} (ID: ${result.rows[0].id})`);
     }
 
-    // 2. ASIGNAR USUARIOS A PROYECTOS
+    // 2. ASIGNAR USUARIOS A PROYECTOS (Mixing Admin, Manager, User1, User2)
     console.log('\n👥 Asignando colaboradores a proyectos...');
 
     const projectUserAssignments = [
-      { project_id: projectIds[0], user_id: 1 }, // admin en Website Redesign
-      { project_id: projectIds[0], user_id: 2 }, // manager en Website Redesign
-      { project_id: projectIds[0], user_id: 3 }, // user en Website Redesign
-      { project_id: projectIds[1], user_id: 1 }, // admin en Mobile App
-      { project_id: projectIds[1], user_id: 2 }, // manager en Mobile App
-      { project_id: projectIds[2], user_id: 2 }, // manager en API Integration
-      { project_id: projectIds[2], user_id: 3 }, // user en API Integration
-      { project_id: projectIds[3], user_id: 2 }, // manager en Database Migration
-      { project_id: projectIds[3], user_id: 1 }, // admin en Database Migration
+      // Website Redesign (All hands on deck)
+      { project_id: projectIds[0], user_id: 1 }, // Admin
+      { project_id: projectIds[0], user_id: 2 }, // Manager
+      { project_id: projectIds[0], user_id: 3 }, // User1
+      { project_id: projectIds[0], user_id: 4 }, // User2
+
+      // Mobile App (Manager + User2 + Admin)
+      { project_id: projectIds[1], user_id: 1 },
+      { project_id: projectIds[1], user_id: 2 },
+      { project_id: projectIds[1], user_id: 4 }, // User2 leads mobile?
+
+      // API Integration (Manager + User1 + User2)
+      { project_id: projectIds[2], user_id: 2 },
+      { project_id: projectIds[2], user_id: 3 }, // User1
+      { project_id: projectIds[2], user_id: 4 }, // User2
+
+      // Database Migration (Admin + Manager + User1)
+      { project_id: projectIds[3], user_id: 1 },
+      { project_id: projectIds[3], user_id: 2 },
+      { project_id: projectIds[3], user_id: 3 }, // User1
     ];
 
     for (const assignment of projectUserAssignments) {
       await pool.query(
-        'INSERT INTO projects_users (project_id, user_id) VALUES ($1, $2)',
+        'INSERT INTO projects_users (project_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [assignment.project_id, assignment.user_id],
       );
     }
@@ -74,21 +121,21 @@ async function seedDatabase() {
         project_id: projectIds[0],
         status_id: 2, // in_progress
         priority: 'high',
-        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
       {
-        description: 'Implementar diseño responsive',
+        description: 'Implementar diseño responsive (Mobile First)',
         project_id: projectIds[0],
         status_id: 1, // pending
         priority: 'medium',
-        due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 días
+        due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       },
       {
         description: 'Optimizar imágenes y assets',
         project_id: projectIds[0],
-        status_id: 1, // pending
+        status_id: 3, // review
         priority: 'low',
-        due_date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 21 días
+        due_date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
       },
       // Mobile App
       {
@@ -96,76 +143,76 @@ async function seedDatabase() {
         project_id: projectIds[1],
         status_id: 4, // completed
         priority: 'high',
-        due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // hace 2 días
+        due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
         completed: true,
       },
       {
-        description: 'Implementar autenticación',
+        description: 'Implementar autenticación Biometrica',
         project_id: projectIds[1],
         status_id: 2, // in_progress
         priority: 'high',
-        due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 días
+        due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
       },
       {
-        description: 'Diseñar pantallas principales',
+        description: 'Diseñar pantallas de perfil',
         project_id: projectIds[1],
-        status_id: 2, // in_progress
+        status_id: 1, // pending
         priority: 'medium',
-        due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 días
+        due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
       },
       // API Integration
       {
-        description: 'Documentar endpoints de terceros',
+        description: 'Documentar endpoints de terceros (Swagger)',
         project_id: projectIds[2],
         status_id: 4, // completed
         priority: 'medium',
-        due_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // hace 5 días
+        due_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
         completed: true,
       },
       {
-        description: 'Implementar cliente HTTP',
+        description: 'Implementar cliente HTTP Axios',
         project_id: projectIds[2],
         status_id: 2, // in_progress
         priority: 'high',
-        due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 días
+        due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       },
       {
-        description: 'Agregar manejo de errores',
+        description: 'Agregar manejo de errores global (Interceptors)',
         project_id: projectIds[2],
         status_id: 1, // pending
         priority: 'medium',
-        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
       // Database Migration
       {
-        description: 'Analizar esquema actual',
+        description: 'Analizar esquema actual Legacy',
         project_id: projectIds[3],
         status_id: 4, // completed
         priority: 'high',
-        due_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // hace 10 días
+        due_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
         completed: true,
       },
       {
-        description: 'Crear scripts de migración',
+        description: 'Crear scripts de migración SQL',
         project_id: projectIds[3],
-        status_id: 2, // in_progress
+        status_id: 3, // review
         priority: 'high',
-        due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 días
+        due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       },
       {
-        description: 'Probar migración en staging',
+        description: 'Probar migración en staging environment',
         project_id: projectIds[3],
         status_id: 1, // pending
         priority: 'high',
-        due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 días
+        due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
       },
     ];
 
     const taskIds = [];
     for (const task of tasks) {
       const result = await pool.query(
-        `INSERT INTO tasks (description, project_id, status_id, priority, due_date, completed) 
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        `INSERT INTO tasks (description, project_id, status_id, priority, due_date, completed, created_at, updated_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING id`,
         [
           task.description,
           task.project_id,
@@ -188,26 +235,31 @@ async function seedDatabase() {
 
     const taskUserAssignments = [
       // Website Redesign tasks
-      { task_id: taskIds[0], user_id: 3 }, // user
-      { task_id: taskIds[1], user_id: 2 }, // manager
-      { task_id: taskIds[2], user_id: 3 }, // user
+      { task_id: taskIds[0], user_id: 3 }, // User1
+      { task_id: taskIds[0], user_id: 4 }, // User2
+      { task_id: taskIds[1], user_id: 2 }, // Manager
+      { task_id: taskIds[2], user_id: 3 }, // User1
+
       // Mobile App tasks
-      { task_id: taskIds[3], user_id: 1 }, // admin
-      { task_id: taskIds[4], user_id: 2 }, // manager
-      { task_id: taskIds[5], user_id: 3 }, // user
+      { task_id: taskIds[3], user_id: 1 }, // Admin
+      { task_id: taskIds[4], user_id: 4 }, // User2 (Mobile Dev)
+      { task_id: taskIds[5], user_id: 4 }, // User2
+
       // API Integration tasks
-      { task_id: taskIds[6], user_id: 2 }, // manager
-      { task_id: taskIds[7], user_id: 3 }, // user
-      { task_id: taskIds[8], user_id: 3 }, // user
+      { task_id: taskIds[6], user_id: 2 }, // Manager
+      { task_id: taskIds[7], user_id: 3 }, // User1 (Backend Dev)
+      { task_id: taskIds[8], user_id: 3 }, // User1
+      { task_id: taskIds[8], user_id: 4 }, // User2 (helping)
+
       // Database Migration tasks
-      { task_id: taskIds[9], user_id: 1 }, // admin
-      { task_id: taskIds[10], user_id: 2 }, // manager
-      { task_id: taskIds[11], user_id: 1 }, // admin
+      { task_id: taskIds[9], user_id: 1 }, // Admin
+      { task_id: taskIds[10], user_id: 2 }, // Manager
+      { task_id: taskIds[11], user_id: 1 }, // Admin
     ];
 
     for (const assignment of taskUserAssignments) {
       await pool.query(
-        'INSERT INTO tasks_users (task_id, user_id) VALUES ($1, $2)',
+        'INSERT INTO tasks_users (task_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [assignment.task_id, assignment.user_id],
       );
     }
@@ -219,32 +271,45 @@ async function seedDatabase() {
     const taskTagAssignments = [
       // Website Redesign
       { task_id: taskIds[0], tag_id: 6 }, // ui
+      { task_id: taskIds[0], tag_id: 1 }, // frontend
       { task_id: taskIds[1], tag_id: 1 }, // frontend
       { task_id: taskIds[1], tag_id: 6 }, // ui
-      { task_id: taskIds[2], tag_id: 1 }, // frontend
+      { task_id: taskIds[2], tag_id: 6 }, // ui
+
       // Mobile App
       { task_id: taskIds[3], tag_id: 5 }, // feature
-      { task_id: taskIds[4], tag_id: 2 }, // backend
+      { task_id: taskIds[3], tag_id: 1 }, // frontend
+      { task_id: taskIds[4], tag_id: 2 }, // backend (auth)
       { task_id: taskIds[4], tag_id: 3 }, // urgent
       { task_id: taskIds[5], tag_id: 6 }, // ui
+
       // API Integration
       { task_id: taskIds[6], tag_id: 7 }, // api
       { task_id: taskIds[7], tag_id: 2 }, // backend
       { task_id: taskIds[7], tag_id: 7 }, // api
-      { task_id: taskIds[8], tag_id: 4 }, // bug
+      { task_id: taskIds[8], tag_id: 4 }, // bug (preventive)
+      { task_id: taskIds[8], tag_id: 2 }, // backend
+
       // Database Migration
       { task_id: taskIds[9], tag_id: 2 }, // backend
       { task_id: taskIds[10], tag_id: 2 }, // backend
       { task_id: taskIds[10], tag_id: 3 }, // urgent
       { task_id: taskIds[11], tag_id: 2 }, // backend
       { task_id: taskIds[11], tag_id: 3 }, // urgent
+      { task_id: taskIds[11], tag_id: 5 }, // feature
     ];
 
     for (const assignment of taskTagAssignments) {
-      await pool.query(
-        'INSERT INTO tasks_tags (task_id, tag_id) VALUES ($1, $2)',
-        [assignment.task_id, assignment.tag_id],
-      );
+      try {
+        await pool.query(
+          'INSERT INTO tasks_tags (task_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [assignment.task_id, assignment.tag_id],
+        );
+      } catch (e) {
+        console.warn(
+          `warning: failed to assign tag ${assignment.tag_id} to task ${assignment.task_id}: ${e.message}`,
+        );
+      }
     }
     console.log(`   ✅ ${taskTagAssignments.length} asignaciones creadas`);
 

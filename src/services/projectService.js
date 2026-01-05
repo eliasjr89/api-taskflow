@@ -1,5 +1,5 @@
 // src/services/projectService.js
-import { pool } from '../db/database.js';
+import { prisma } from '../lib/prisma.js';
 import * as ProjectRepository from '../repositories/projectRepository.js';
 import { AppError } from '../utils/AppError.js';
 
@@ -12,7 +12,18 @@ export const getProjectById = async (id) => {
   if (!project) {
     throw new AppError('Project not found', 404);
   }
-
+  // No need to fetch manually if repo already transformed, but Repo 'findById' uses 'transformProject' via Prisma include
+  // But wait, 'findById' in repo now returns the object. Does it include 'users' field?
+  // Previous Code had 'project.users = await getProjectUsers...'.
+  // Prisma `include` doesn't transform nicely to flat 'users' array unless mapped.
+  // The 'transformProject' helper didn't add 'users' array, just counts.
+  // So we still need to fetch users/tasks separately to match legacy response if consumer expects them.
+  // But legacy 'findById' did:
+  /*
+  project.users = await ProjectRepository.getProjectUsers(id);
+  project.tasks = await ProjectRepository.getProjectTasks(id);
+  */
+  // So we should keep doing this.
   project.users = await ProjectRepository.getProjectUsers(id);
   project.tasks = await ProjectRepository.getProjectTasks(id);
 
@@ -20,102 +31,83 @@ export const getProjectById = async (id) => {
 };
 
 export const createProject = async (data, creatorId) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    if (
-      data.user_ids &&
-      !(await ProjectRepository.checkUsersExist(data.user_ids, client))
-    ) {
-      throw new AppError('One or more user_ids do not exist', 400);
-    }
-
-    const project = await ProjectRepository.create(data, creatorId, client);
-
-    // Add creator + users
-    const userSet = new Set(data.user_ids || []);
-    userSet.add(creatorId);
-
-    await ProjectRepository.addUsers(project.id, Array.from(userSet), client);
-
-    await client.query('COMMIT');
-    // Could fetch full proj but let's return created object
-    return project;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
-export const updateProject = async (id, data) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    const existingProject = await ProjectRepository.findById(id, client);
-    if (!existingProject) {
-      throw new AppError('Project not found', 404);
-    }
-
-    const updated = await ProjectRepository.update(id, data, client);
-
-    if (data.user_ids) {
-      if (!(await ProjectRepository.checkUsersExist(data.user_ids, client))) {
+  return await prisma.$transaction(
+    async (tx) => {
+      if (
+        data.user_ids &&
+        !(await ProjectRepository.checkUsersExist(data.user_ids, tx))
+      ) {
         throw new AppError('One or more user_ids do not exist', 400);
       }
 
-      // Replace users strategy
-      await ProjectRepository.removeAllUsers(id, client);
+      const project = await ProjectRepository.create(data, creatorId, tx);
 
-      const userSet = new Set(data.user_ids);
-      userSet.add(existingProject.creator_id); // Ensure creator stays? Typically yes.
+      // Add creator + users
+      const userSet = new Set(data.user_ids || []);
+      userSet.add(creatorId);
 
-      await ProjectRepository.addUsers(id, Array.from(userSet), client);
-    }
+      await ProjectRepository.addUsers(project.id, Array.from(userSet), tx);
 
-    await client.query('COMMIT');
-    return updated;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+      return project;
+    },
+    {
+      timeout: 10000,
+    },
+  );
+};
+
+export const updateProject = async (id, data) => {
+  return await prisma.$transaction(
+    async (tx) => {
+      const existingProject = await ProjectRepository.findById(id, tx);
+      if (!existingProject) {
+        throw new AppError('Project not found', 404);
+      }
+
+      const updated = await ProjectRepository.update(id, data, tx);
+
+      if (data.user_ids) {
+        if (!(await ProjectRepository.checkUsersExist(data.user_ids, tx))) {
+          throw new AppError('One or more user_ids do not exist', 400);
+        }
+
+        // Replace users strategy
+        await ProjectRepository.removeAllUsers(id, tx);
+
+        const userSet = new Set(data.user_ids);
+        userSet.add(existingProject.creator_id); // Ensure creator stays
+
+        await ProjectRepository.addUsers(id, Array.from(userSet), tx);
+      }
+      return updated;
+    },
+    {
+      timeout: 10000,
+    },
+  );
 };
 
 export const deleteProject = async (id) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+  return await prisma.$transaction(
+    async (tx) => {
+      // Clean relations
+      await ProjectRepository.removeAllUsers(id, tx);
+      // Tasks are handled by DB cascade or orphaned. Legacy code didn't delete them explicitely.
 
-    // Clean relations
-    await ProjectRepository.removeAllUsers(id, client);
-    // Tasks are usually soft deleted or cascaded?
-    // The previous controller didn't explicitly delete tasks, but DB FK might not cascade.
-    // Assuming standard cascade or manual cleanup:
-    // "DELETE FROM tasks WHERE project_id=$1" - not in original controller, let's leave it for now (tasks might become orphaned or DB handles it).
-    // Original controller only deleted projects_users.
-
-    const deleted = await ProjectRepository.deleteById(id, client);
-    if (!deleted) {
-      throw new AppError('Project not found', 404);
-    }
-
-    await client.query('COMMIT');
-    return deleted;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+      const deleted = await ProjectRepository.deleteById(id, tx);
+      if (!deleted) {
+        throw new AppError('Project not found', 404);
+      }
+      return deleted;
+    },
+    {
+      timeout: 10000,
+    },
+  );
 };
 
 export const addUsersToProject = async (id, userIds) => {
-  // Basic existence checks
+  // Basic existence checks - no transaction strictly needed if just adding
   const project = await ProjectRepository.findById(id);
   if (!project) {
     throw new AppError('Project not found', 404);

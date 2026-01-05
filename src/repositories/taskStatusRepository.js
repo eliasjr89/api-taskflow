@@ -1,48 +1,38 @@
-// src/repositories/taskStatusRepository.js
-import { pool } from '../db/database.js';
+import { prisma } from '../lib/prisma.js';
 
-export const findAll = async (client = pool) => {
-  const result = await client.query(
-    'SELECT * FROM task_statuses ORDER BY id ASC',
-  );
-  return result.rows;
+export const findAll = async () => {
+  return await prisma.taskStatus.findMany({
+    orderBy: { id: 'asc' },
+  });
 };
 
-export const findById = async (id, client = pool) => {
-  const result = await client.query('SELECT * FROM task_statuses WHERE id=$1', [
-    id,
-  ]);
-  return result.rows[0];
+export const findById = async (id) => {
+  return await prisma.taskStatus.findUnique({
+    where: { id: Number(id) },
+  });
 };
 
-export const findByName = async (name, client = pool) => {
-  const result = await client.query(
-    'SELECT * FROM task_statuses WHERE name=$1',
-    [name],
-  );
-  return result.rows[0];
+export const findByName = async (name) => {
+  return await prisma.taskStatus.findUnique({
+    where: { name },
+  });
 };
 
-export const create = async (name, client = pool) => {
-  const result = await client.query(
-    'INSERT INTO task_statuses (name) VALUES ($1) RETURNING *',
-    [name],
-  );
-  return result.rows[0];
+export const create = async (name) => {
+  return await prisma.taskStatus.create({
+    data: { name },
+  });
 };
 
-export const update = async (id, name, client = pool) => {
-  const result = await client.query(
-    'UPDATE task_statuses SET name=COALESCE($1,name), updated_at=NOW() WHERE id=$2 RETURNING *',
-    [name, id],
-  );
-  return result.rows[0];
+export const update = async (id, name) => {
+  return await prisma.taskStatus.update({
+    where: { id: Number(id) },
+    data: { name },
+  });
 };
 
-export const deleteById = async (id, client = pool) => {
-  const result = await client.query(
-    'DELETE FROM task_statuses WHERE id=$1 RETURNING *',
-    [id],
-  );
-  return result.rows[0];
+export const deleteById = async (id) => {
+  return await prisma.taskStatus.delete({
+    where: { id: Number(id) },
+  });
 };

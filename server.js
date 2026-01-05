@@ -1,13 +1,14 @@
-import 'dotenv/config'; // Still needed if loading .env before src/config/env imports, generally redundant if env.js does it, but safe.
+import 'dotenv/config';
 import app from './src/app.js';
-import { connectDB } from './src/db/database.js';
+import { prisma } from './src/lib/prisma.js';
 import { env } from './src/config/env.js';
 
 const PORT = env.PORT;
 
 const startServer = async () => {
   try {
-    await connectDB();
+    await prisma.$connect();
+    console.log('Database connected via Prisma');
     const server = app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
       console.log(
@@ -25,6 +26,18 @@ const startServer = async () => {
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
+
+    process.on('unhandledRejection', (err) => {
+      console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+      console.error(err.name, err.message);
+      process.exit(1);
+    });
+
+    process.on('uncaughtException', (err) => {
+      console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+      console.error(err.name, err.message);
+      process.exit(1);
+    });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

@@ -1,5 +1,5 @@
 // src/services/auditService.js
-import { pool } from "../db/database.js";
+import { prisma } from '../lib/prisma.js';
 
 /**
  * Log an activity to the audit_logs table.
@@ -21,16 +21,21 @@ export const logAction = async ({
 }) => {
   try {
     const ipAddress = req
-      ? req.headers["x-forwarded-for"] || req.socket.remoteAddress
+      ? req.headers['x-forwarded-for'] || req.socket.remoteAddress
       : null;
 
-    await pool.query(
-      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, action, entityType, entityId, details, ipAddress]
-    );
+    await prisma.auditLog.create({
+      data: {
+        userId: Number(userId),
+        action,
+        entityType,
+        entityId: Number(entityId),
+        details: details || {},
+        ipAddress,
+      },
+    });
   } catch (error) {
-    console.error("FAILED TO LOG AUDIT:", error);
+    console.error('FAILED TO LOG AUDIT:', error);
     // Don't throw, we don't want to break the main flow if logging fails
   }
 };
@@ -40,20 +45,38 @@ export const logAction = async ({
  * @param {number} limit
  */
 export const getRecentLogs = async (limit = 50) => {
-  const query = `
-    SELECT al.*, u.username, u.email, u.name, u.lastname, u.role, u.profile_image
-    FROM audit_logs al
-    LEFT JOIN users u ON al.user_id = u.id
-    ORDER BY al.created_at DESC
-    LIMIT $1
-  `;
-  const res = await pool.query(query, [limit]);
-  return res.rows;
+  const logs = await prisma.auditLog.findMany({
+    take: Number(limit),
+    orderBy: { createdAt: 'desc' },
+    include: {
+      user: {
+        select: {
+          username: true,
+          email: true,
+          name: true,
+          lastname: true,
+          role: true,
+          profileImage: true,
+        },
+      },
+    },
+  });
+
+  // Flatten structure to match legacy
+  return logs.map((log) => ({
+    ...log,
+    username: log.user?.username,
+    email: log.user?.email,
+    name: log.user?.name,
+    lastname: log.user?.lastname,
+    role: log.user?.role,
+    profile_image: log.user?.profileImage,
+  }));
 };
 
 /**
  * Clear all audit logs.
  */
 export const clearLogs = async () => {
-  await pool.query("TRUNCATE TABLE audit_logs");
+  await prisma.auditLog.deleteMany({});
 };

@@ -1,147 +1,204 @@
-// src/repositories/projectRepository.js
-import { pool } from "../db/database.js";
+import { prisma } from '../lib/prisma.js';
 
-export const findAll = async (client = pool) => {
-  const query = `
-    SELECT 
-      p.*, 
-      u.username as creator_username, 
-      u.name as creator_name, 
-      u.lastname as creator_lastname, 
-      u.role as creator_role,
-      COUNT(DISTINCT t.id) AS num_tasks,
-      COUNT(DISTINCT pu.user_id) AS num_team_members
-    FROM projects p
-    LEFT JOIN users u ON p.creator_id = u.id
-    LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted = false
-    LEFT JOIN projects_users pu ON p.id = pu.project_id
-    GROUP BY p.id, u.id
-    ORDER BY p.created_at DESC
-  `;
-  const result = await client.query(query);
-  return result.rows;
+// Helper to transform Project to match legacy API response
+const transformProject = (project) => ({
+  id: project.id,
+  name: project.name,
+  description: project.description,
+  color: 'indigo', // Default as schema doesn't have it yet, or add to schema if critical
+  icon: 'Folder', // Default
+  created_at: project.createdAt,
+  updated_at: project.updatedAt,
+  creator_id: project.creatorId,
+  creator_username: project.creator?.username,
+  creator_name: project.creator?.name,
+  creator_lastname: project.creator?.lastname,
+  creator_role: project.creator?.role,
+  num_tasks: project._count?.tasks || 0,
+  num_team_members: project._count?.users || 0,
+  users:
+    project.users?.map((u) => ({
+      id: u.user.id,
+      username: u.user.username,
+      profile_image: u.user.profileImage,
+    })) || [],
+});
+
+export const findAll = async () => {
+  const projects = await prisma.project.findMany({
+    include: {
+      creator: true,
+      users: {
+        take: 5,
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              profileImage: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: { tasks: true, users: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  return projects.map(transformProject);
 };
 
-export const findById = async (id, client = pool) => {
-  const query = `
-      SELECT p.*, u.username AS creator_username
-      FROM projects p
-      LEFT JOIN users u ON p.creator_id = u.id
-      WHERE p.id = $1
-    `;
-  const result = await client.query(query, [id]);
-  return result.rows[0];
+export const findById = async (id, tx = prisma) => {
+  const project = await tx.project.findUnique({
+    where: { id: Number(id) },
+    include: {
+      creator: true,
+      _count: {
+        select: { tasks: true, users: true },
+      },
+    },
+  });
+  if (!project) {
+    return null;
+  }
+
+  // For findById, legacy might expect simplified object, but let's conform to standard
+  return {
+    ...transformProject(project),
+    // Additional fields if needed
+  };
 };
 
-export const create = async (projectData, creatorId, client = pool) => {
-  const { name, description, color, icon } = projectData;
-  const query = `
-      INSERT INTO projects (name, description, color, icon, creator_id, created_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
-      RETURNING *
-    `;
-  const result = await client.query(query, [
-    name,
-    description || null,
-    color || "indigo",
-    icon || "Folder",
-    creatorId,
-  ]);
-  return result.rows[0];
+export const create = async (projectData, creatorId, tx = prisma) => {
+  const { name, description } = projectData;
+  const project = await tx.project.create({
+    data: {
+      name,
+      description,
+      creatorId: Number(creatorId),
+      // color/icon ignored as per current schema, add if needed
+    },
+  });
+  return transformProject(project);
 };
 
-export const update = async (id, projectData, client = pool) => {
-  const { name, description, color, icon } = projectData;
-  const query = `
-      UPDATE projects SET
-        name = COALESCE($1, name),
-        description = COALESCE($2, description),
-        color = COALESCE($3, color),
-        icon = COALESCE($4, icon),
-        updated_at = NOW()
-      WHERE id = $5
-      RETURNING *
-    `;
-  const result = await client.query(query, [
-    name || null,
-    description || null,
-    color,
-    icon,
-    id,
-  ]);
-  return result.rows[0];
+export const update = async (id, projectData, tx = prisma) => {
+  const { name, description } = projectData;
+  const data = {};
+  if (name !== undefined) {
+    data.name = name;
+  }
+  if (description !== undefined) {
+    data.description = description;
+  }
+
+  const project = await tx.project.update({
+    where: { id: Number(id) },
+    data,
+  });
+  return transformProject(project);
 };
 
-export const deleteById = async (id, client = pool) => {
-  const result = await client.query(
-    "DELETE FROM projects WHERE id=$1 RETURNING *",
-    [id]
-  );
-  return result.rows[0];
+export const deleteById = async (id, tx = prisma) => {
+  const project = await tx.project.delete({
+    where: { id: Number(id) },
+  });
+  return transformProject(project);
 };
 
 // Relations
-export const addUsers = async (projectId, userIds, client = pool) => {
-  for (const uid of userIds) {
-    // Avoid duplicates using ON CONFLICT DO NOTHING or checks?
-    // Simple insert for now, assuming external check or error handling.
-    // Better safely:
-    await client.query(
-      "INSERT INTO projects_users (project_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-      [projectId, uid]
-    );
+export const addUsers = async (projectId, userIds, tx = prisma) => {
+  // Prisma doesn't support ON CONFLICT DO NOTHING for createMany easily without throwing
+  // But we can just try/catch or use createMany with skipDuplicates (if DB supports it, Postgres does)
+  await tx.projectsOnUsers.createMany({
+    data: userIds.map((userId) => ({
+      projectId: Number(projectId),
+      userId: Number(userId),
+    })),
+    skipDuplicates: true,
+  });
+};
+
+export const removeUser = async (projectId, userId, tx = prisma) => {
+  try {
+    await tx.projectsOnUsers.delete({
+      where: {
+        projectId_userId: {
+          projectId: Number(projectId),
+          userId: Number(userId),
+        },
+      },
+    });
+  } catch (error) {
+    // Ignore if not found
+    if (error.code !== 'P2025') {
+      throw error;
+    }
   }
 };
 
-export const removeUser = async (projectId, userId, client = pool) => {
-  await client.query(
-    "DELETE FROM projects_users WHERE project_id=$1 AND user_id=$2",
-    [projectId, userId]
-  );
+export const removeAllUsers = async (projectId, tx = prisma) => {
+  await tx.projectsOnUsers.deleteMany({
+    where: { projectId: Number(projectId) },
+  });
 };
 
-export const removeAllUsers = async (projectId, client = pool) => {
-  await client.query("DELETE FROM projects_users WHERE project_id=$1", [
-    projectId,
-  ]);
+export const getProjectUsers = async (projectId, tx = prisma) => {
+  const relations = await tx.projectsOnUsers.findMany({
+    where: { projectId: Number(projectId) },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          lastname: true,
+        },
+      },
+    },
+  });
+  return relations.map((r) => r.user);
 };
 
-export const getProjectUsers = async (projectId, client = pool) => {
-  const query = `
-      SELECT u.id, u.username, u.name, u.lastname
-      FROM users u
-      JOIN projects_users pu ON pu.user_id = u.id
-      WHERE pu.project_id = $1
-    `;
-  const result = await client.query(query, [projectId]);
-  return result.rows;
+export const getProjectTasks = async (projectId, tx = prisma) => {
+  const tasks = await tx.task.findMany({
+    where: {
+      projectId: Number(projectId),
+      deleted: false,
+    },
+    include: {
+      status: true,
+      users: {
+        include: {
+          user: {
+            select: { id: true, username: true, name: true, lastname: true },
+          },
+        },
+      },
+    },
+    orderBy: { id: 'asc' },
+  });
+
+  return tasks.map((t) => ({
+    task_id: t.id,
+    description: t.description,
+    priority: t.priority,
+    completed: t.completed,
+    due_date: t.dueDate,
+    status: t.status?.name,
+    assigned_users: t.users.map((u) => u.user),
+  }));
 };
 
-export const getProjectTasks = async (projectId, client = pool) => {
-  const query = `
-      SELECT t.id AS task_id, t.description, t.priority, t.completed, t.due_date,
-             ts.name AS status,
-             json_agg(json_build_object('id', u.id, 'username', u.username, 'name', u.name, 'lastname', u.lastname)) AS assigned_users
-      FROM tasks t
-      LEFT JOIN task_statuses ts ON t.status_id = ts.id
-      LEFT JOIN tasks_users tu ON t.id = tu.task_id
-      LEFT JOIN users u ON tu.user_id = u.id
-      WHERE t.project_id = $1 AND t.deleted = false
-      GROUP BY t.id, ts.name
-      ORDER BY t.id
-    `;
-  const result = await client.query(query, [projectId]);
-  return result.rows;
-};
-
-// Helper
-export const checkUsersExist = async (userIds, client = pool) => {
+export const checkUsersExist = async (userIds, tx = prisma) => {
   if (!userIds || userIds.length === 0) {
     return true;
   }
-  const res = await client.query(
-    "SELECT id FROM users WHERE id = ANY($1::int[])",
-    [userIds]
-  );
-  return res.rows.length === userIds.length;
+  const count = await tx.user.count({
+    where: {
+      id: { in: userIds.map(Number) },
+    },
+  });
+  return count === userIds.length;
 };

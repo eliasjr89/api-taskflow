@@ -1,11 +1,10 @@
-// src/services/taskService.js
-import { pool } from '../db/database.js';
+import { prisma } from '../lib/prisma.js';
 import * as TaskRepository from '../repositories/taskRepository.js';
 import { AppError } from '../utils/AppError.js';
 
-export const getAllTasks = async (filters) => {
-  const page = filters.page || 1;
-  const limit = filters.limit || 10;
+export const getAllTasks = async (filters = {}) => {
+  const page = Number(filters.page) || 1;
+  const limit = Number(filters.limit) || 10;
   const offset = (page - 1) * limit;
 
   const { tasks, total } = await TaskRepository.findAll({
@@ -14,194 +13,205 @@ export const getAllTasks = async (filters) => {
     offset,
   });
 
+  const totalPages = Math.ceil(total / limit);
+
   return {
     results: tasks,
     pagination: {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit),
+      totalPages,
     },
   };
 };
 
-export const getTaskById = async (id) => {
-  const task = await TaskRepository.findById(id);
+export const getTaskById = async (taskId) => {
+  const task = await TaskRepository.findById(taskId);
   if (!task) {
     throw new AppError('Task not found', 404);
   }
   return task;
 };
 
-export const createTask = async (data) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+export const createTask = async (taskData) => {
+  const task = await prisma.$transaction(
+    async (tx) => {
+      // 1. Validate Project
+      if (taskData.project_id) {
+        const projectExists = await TaskRepository.checkProjectExists(
+          taskData.project_id,
+          tx,
+        );
+        if (!projectExists) {
+          throw new AppError('Project not found', 404);
+        }
+      }
 
-    // Validations
-    const projectExists = await TaskRepository.checkProjectExists(
-      data.project_id,
-      client,
-    );
-    if (!projectExists) {
-      throw new AppError('Project not found', 404);
-    }
+      // 2. Validate Status (id 1 = 'pending' by default usually, but checking provided ID)
+      if (taskData.status_id) {
+        const statusExists = await TaskRepository.checkStatusExists(
+          taskData.status_id,
+          tx,
+        );
+        if (!statusExists) {
+          throw new AppError('Status not found', 404);
+        }
+      }
 
-    const statusExists = await TaskRepository.checkStatusExists(
-      data.status_id,
-      client,
-    );
-    if (!statusExists) {
-      throw new AppError('Status not found', 404);
-    }
+      // 3. Create Task
+      const newTask = await TaskRepository.create(taskData, tx);
 
-    if (
-      data.user_ids &&
-      !(await TaskRepository.checkUsersExist(data.user_ids, client))
-    ) {
+      // 4. Assign Users if provided
+      if (taskData.user_ids && Array.isArray(taskData.user_ids)) {
+        await TaskRepository.addUsers(newTask.id, taskData.user_ids, tx);
+      }
+
+      return newTask;
+    },
+    {
+      timeout: 10000,
+    },
+  );
+
+  // Fetch complete task with relations to return
+  return TaskRepository.findById(task.id);
+};
+
+export const updateTask = async (taskId, taskData) => {
+  const updatedTask = await prisma.$transaction(
+    async (tx) => {
+      // 1. Get current task
+      const currentTask = await TaskRepository.findById(taskId, tx);
+      if (!currentTask) {
+        throw new AppError('Task not found', 404);
+      }
+
+      // 2. Validate Project if changing
+      if (
+        taskData.project_id &&
+        taskData.project_id !== currentTask.project_id
+      ) {
+        const projectExists = await TaskRepository.checkProjectExists(
+          taskData.project_id,
+          tx,
+        );
+        if (!projectExists) {
+          throw new AppError('Project not found', 404);
+        }
+      }
+
+      // 3. Validate Status if changing
+      if (taskData.status_id && taskData.status_id !== currentTask.status_id) {
+        const statusExists = await TaskRepository.checkStatusExists(
+          taskData.status_id,
+          tx,
+        );
+        if (!statusExists) {
+          throw new AppError('Status not found', 404);
+        }
+      }
+
+      // 4. Update task
+      const updated = await TaskRepository.update(taskId, taskData, tx);
+
+      // 5. Update Assignments if provided
+      if (taskData.user_ids && Array.isArray(taskData.user_ids)) {
+        // Replace existing assignments
+        await TaskRepository.removeAllUsers(taskId, tx);
+        if (taskData.user_ids.length > 0) {
+          await TaskRepository.addUsers(taskId, taskData.user_ids, tx);
+        }
+      }
+
+      return updated;
+    },
+    {
+      timeout: 10000,
+    },
+  );
+
+  // Return fresh data with relations
+  return TaskRepository.findById(updatedTask.id);
+};
+
+export const deleteTask = async (taskId) => {
+  await prisma.$transaction(
+    async (tx) => {
+      const task = await TaskRepository.findById(taskId, tx);
+      if (!task) {
+        throw new AppError('Task not found', 404);
+      }
+
+      // Soft delete: set deleted = true
+      await TaskRepository.deleteSoft(taskId, tx);
+    },
+    {
+      timeout: 10000,
+    },
+  );
+};
+
+export const addUsersToTask = async (taskId, userIds) => {
+  const task = await TaskRepository.findById(taskId);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
+
+  if (userIds && userIds.length > 0) {
+    // Check if users exist in DB (optional but good)
+    const usersExist = await TaskRepository.checkUsersExist(userIds);
+    if (!usersExist) {
       throw new AppError('One or more users not found', 404);
     }
-    if (
-      data.tag_ids &&
-      !(await TaskRepository.checkTagsExist(data.tag_ids, client))
-    ) {
+    await TaskRepository.addUsers(taskId, userIds);
+  }
+};
+
+export const removeUserFromTask = async (taskId, userId) => {
+  const task = await TaskRepository.findById(taskId);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
+  await TaskRepository.removeUser(taskId, userId);
+};
+
+export const addTagsToTask = async (taskId, tagIds) => {
+  const task = await TaskRepository.findById(taskId);
+  if (!task) {
+    throw new AppError('Task not found', 404);
+  }
+
+  if (tagIds && tagIds.length > 0) {
+    // Check tags exist (optional)
+    const tagsExist = await TaskRepository.checkTagsExist(tagIds);
+    if (!tagsExist) {
       throw new AppError('One or more tags not found', 404);
     }
-
-    // Create Task
-    const newTask = await TaskRepository.create(data, client);
-
-    // Relations
-    if (data.user_ids && data.user_ids.length > 0) {
-      await TaskRepository.addUsers(newTask.id, data.user_ids, client);
-    }
-    if (data.tag_ids && data.tag_ids.length > 0) {
-      await TaskRepository.addTags(newTask.id, data.tag_ids, client);
-    }
-
-    await client.query('COMMIT');
-    // Return full task with relations
-    return await TaskRepository.findById(newTask.id); // Uses default pool, it's fine as committed
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
+    await TaskRepository.addTags(taskId, tagIds);
   }
 };
 
-export const updateTask = async (id, data) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // Check existence
-    const existingTask = await TaskRepository.findById(id, client);
-    if (!existingTask) {
-      throw new AppError('Task not found', 404);
-    }
-
-    if (
-      data.user_ids &&
-      !(await TaskRepository.checkUsersExist(data.user_ids, client))
-    ) {
-      throw new AppError('One or more users not found', 404);
-    }
-
-    if (
-      data.tag_ids &&
-      !(await TaskRepository.checkTagsExist(data.tag_ids, client))
-    ) {
-      throw new AppError('One or more tags not found', 404);
-    }
-
-    // Update Task
-    await TaskRepository.update(id, data, client);
-
-    // Update Relations
-    if (data.user_ids) {
-      await TaskRepository.removeAllUsers(id, client);
-      if (data.user_ids.length > 0) {
-        await TaskRepository.addUsers(id, data.user_ids, client);
-      }
-    }
-    if (data.tag_ids) {
-      await TaskRepository.removeAllTags(id, client);
-      if (data.tag_ids.length > 0) {
-        await TaskRepository.addTags(id, data.tag_ids, client);
-      }
-    }
-
-    await client.query('COMMIT');
-    return await TaskRepository.findById(id);
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
-export const deleteTask = async (id) => {
-  const deletedTask = await TaskRepository.deleteById(id);
-  if (!deletedTask) {
-    throw new AppError('Task not found', 404);
-  }
-  return deletedTask;
-};
-
-export const addUsersToTask = async (id, userIds) => {
-  const task = await TaskRepository.findById(id);
+export const removeTagFromTask = async (taskId, tagId) => {
+  const task = await TaskRepository.findById(taskId);
   if (!task) {
     throw new AppError('Task not found', 404);
   }
-
-  if (!(await TaskRepository.checkUsersExist(userIds))) {
-    throw new AppError('One or more users not found', 400);
-  }
-  await TaskRepository.addUsers(id, userIds);
+  await TaskRepository.removeTag(taskId, tagId);
 };
 
-export const removeUserFromTask = async (id, userId) => {
-  const task = await TaskRepository.findById(id);
+export const getTaskUsers = async (taskId) => {
+  const task = await TaskRepository.findById(taskId);
   if (!task) {
     throw new AppError('Task not found', 404);
   }
-  await TaskRepository.removeUser(id, userId);
+  return TaskRepository.getTaskUsers(taskId);
 };
 
-export const addTagsToTask = async (id, tagIds) => {
-  const task = await TaskRepository.findById(id);
+export const getTaskTags = async (taskId) => {
+  const task = await TaskRepository.findById(taskId);
   if (!task) {
     throw new AppError('Task not found', 404);
   }
-
-  if (!(await TaskRepository.checkTagsExist(tagIds))) {
-    throw new AppError('One or more tags not found', 400);
-  }
-  await TaskRepository.addTags(id, tagIds);
-};
-
-export const removeTagFromTask = async (id, tagId) => {
-  const task = await TaskRepository.findById(id);
-  if (!task) {
-    throw new AppError('Task not found', 404);
-  }
-  await TaskRepository.removeTag(id, tagId);
-};
-
-export const getTaskUsers = async (id) => {
-  const task = await TaskRepository.findById(id);
-  if (!task) {
-    throw new AppError('Task not found', 404);
-  }
-  return await TaskRepository.getTaskUsers(id);
-};
-
-export const getTaskTags = async (id) => {
-  const task = await TaskRepository.findById(id);
-  if (!task) {
-    throw new AppError('Task not found', 404);
-  }
-  return await TaskRepository.getTaskTags(id);
+  return TaskRepository.getTaskTags(taskId);
 };

@@ -7,7 +7,15 @@ export const createUserSchema = z.object({
     name: z.string().optional(),
     lastname: z.string().optional(),
     email: z.string().email('Invalid email format'),
+    email: z.string().email('Invalid email format'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
+    task_ids: z
+      .union([
+        z.array(z.string().transform((val) => Number(val))),
+        z.array(z.number()),
+        z.string().transform((val) => [Number(val)]),
+      ])
+      .optional(),
   }),
 });
 
@@ -20,7 +28,15 @@ export const updateUserSchema = z.object({
     name: z.string().optional(),
     lastname: z.string().optional(),
     email: z.string().email().optional(),
+    email: z.string().email().optional(),
     password: z.string().min(6).optional(),
+    task_ids: z
+      .union([
+        z.array(z.string().transform((val) => Number(val))),
+        z.array(z.number()),
+        z.string().transform((val) => [Number(val)]),
+      ])
+      .optional(),
   }),
 });
 

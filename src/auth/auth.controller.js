@@ -5,20 +5,15 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { AppError } from '../utils/AppError.js';
 
 export const login = catchAsync(async (req, res, next) => {
-  console.log('➡️ Login request received for:', req.body.email);
   const { email, password } = req.body;
 
   if (!email || !password) {
-    console.log('❌ Missing email or password');
     return next(new AppError('Please provide email and password', 400));
   }
-
-  console.log('🔍 Calling AuthService.login...');
 
   // Delegate business logic to service
   try {
     const { token, user } = await AuthService.login({ email, password });
-    console.log('✅ Login success in Service. Returning response...');
 
     // Set HTTP Only Cookie
     const cookieOptions = {

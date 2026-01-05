@@ -6,9 +6,15 @@ async function resetUsers() {
   try {
     console.log('🗑️  Limpiando base de datos...\n');
 
-    // 1. Eliminar todos los usuarios (esto eliminará en cascada las relaciones)
+    // 1. Eliminar todos los usuarios y datos referenciales
+    await pool.query('DELETE FROM audit_logs');
+    await pool.query('DELETE FROM tasks_tags');
+    await pool.query('DELETE FROM tags');
+    await pool.query('DELETE FROM tasks'); // Depende de status
+    await pool.query('DELETE FROM task_statuses');
+    await pool.query('DELETE FROM projects');
     await pool.query('DELETE FROM users');
-    console.log('✅ Usuarios eliminados');
+    console.log('✅ Datos eliminados');
 
     // 2. Resetear el contador de IDs
     await pool.query('ALTER SEQUENCE users_id_seq RESTART WITH 1');
@@ -16,10 +22,10 @@ async function resetUsers() {
     try {
       await pool.query('ALTER SEQUENCE projects_id_seq RESTART WITH 1');
       await pool.query('ALTER SEQUENCE tasks_id_seq RESTART WITH 1');
+      await pool.query('ALTER SEQUENCE tags_id_seq RESTART WITH 1');
+      await pool.query('ALTER SEQUENCE task_statuses_id_seq RESTART WITH 1');
     } catch {
-      console.log(
-        '⚠️  Nota: No se pudieron resetear secuencias de proyectos/tareas (¿quizás no existen aún?)',
-      );
+      console.log('⚠️  Nota: No se pudieron resetear algunas secuencias');
     }
     console.log('✅ Secuencias reseteadas\n');
 
@@ -48,7 +54,15 @@ async function resetUsers() {
         email: 'user@taskflow.com',
         password: 'User123',
         name: 'User',
-        lastname: 'TaskFlow',
+        lastname: 'Alpha',
+        role: 'user',
+      },
+      {
+        username: 'user2',
+        email: 'user2@taskflow.com',
+        password: 'User123',
+        name: 'User',
+        lastname: 'Beta',
         role: 'user',
       },
     ];
@@ -57,8 +71,8 @@ async function resetUsers() {
       const hashedPassword = await bcrypt.hash(user.password, 10);
 
       const result = await pool.query(
-        `INSERT INTO users (username, email, password, name, lastname, role) 
-         VALUES ($1, $2, $3, $4, $5, $6) 
+        `INSERT INTO users (username, email, password, name, lastname, role, created_at, updated_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) 
          RETURNING id, username, email, name, lastname, role`,
         [
           user.username,
@@ -91,8 +105,12 @@ async function resetUsers() {
     console.log('  Email: manager@taskflow.com');
     console.log('  Password: Manager123\n');
 
-    console.log('USER:');
+    console.log('USER 1:');
     console.log('  Email: user@taskflow.com');
+    console.log('  Password: User123\n');
+
+    console.log('USER 2:');
+    console.log('  Email: user2@taskflow.com');
     console.log('  Password: User123\n');
 
     await pool.end();

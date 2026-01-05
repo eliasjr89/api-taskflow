@@ -1,130 +1,282 @@
-// src/repositories/userRepository.js
-import { pool } from "../db/database.js";
+import { prisma } from '../lib/prisma.js';
 
-// Export pool for direct queries in controllers when needed
-export { pool };
+// Helper to transform Project to match legacy API response
+const transformProject = (project) => ({
+  id: project.id,
+  name: project.name,
+  description: project.description,
+  created_at: project.createdAt,
+  updated_at: project.updatedAt,
+  creator_username: project.creator?.username,
+  num_tasks: project._count?.tasks || 0,
+});
 
-export const findAll = async (client = pool) => {
-  const result = await client.query(
-    "SELECT id, username, name, lastname, email, role, profile_image, created_at, updated_at, bio, location, website FROM users ORDER BY id ASC"
-  );
-  return result.rows;
+// Helper to transform Task to match legacy API response
+const transformTask = (task) => ({
+  id: task.id,
+  description: task.description, // 'title' in frontend? Frontend maps description -> title.
+  project_id: task.projectId,
+  status_id: task.statusId,
+  priority: task.priority,
+  due_date: task.dueDate,
+  completed: task.completed,
+  created_at: task.createdAt,
+  status: task.status?.name,
+  project_name: task.project?.name,
+  tags:
+    task.tags && Array.isArray(task.tags)
+      ? task.tags.map((t) => ({ id: t.tag.id, name: t.tag.name }))
+      : [],
+});
+
+export const findAll = async () => {
+  const usersWithCounts = await prisma.user.findMany({
+    orderBy: { id: 'asc' },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      lastname: true,
+      email: true,
+      role: true,
+      profileImage: true,
+      createdAt: true,
+      updatedAt: true,
+      bio: true,
+      location: true,
+      website: true,
+      _count: {
+        select: { tasks: true, projects: true },
+      },
+    },
+  });
+
+  // Map to snake_case for backward compatibility
+  return usersWithCounts.map((u) => ({
+    ...u,
+    profile_image: u.profileImage,
+    created_at: u.createdAt,
+    updated_at: u.updatedAt,
+    num_tasks: u._count?.tasks || 0,
+    num_projects: u._count?.projects || 0,
+  }));
 };
 
-export const findByEmail = async (email, client = pool) => {
-  const query =
-    "SELECT id, username, name, lastname, email, password, role, profile_image, created_at, bio, location, website FROM users WHERE email = $1";
-  const result = await client.query(query, [email]);
-  return result.rows[0];
+export const findByEmail = async (email) => {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+  if (!user) {
+    return null;
+  }
+  return {
+    ...user,
+    profile_image: user.profileImage,
+    created_at: user.createdAt,
+    updated_at: user.updatedAt,
+  };
 };
 
-export const findById = async (id, client = pool) => {
-  const query =
-    "SELECT id, username, name, lastname, email, role, profile_image, created_at, bio, location, website FROM users WHERE id = $1";
-  const result = await client.query(query, [id]);
-  return result.rows[0];
+export const findById = async (id) => {
+  const user = await prisma.user.findUnique({
+    where: { id: Number(id) },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      lastname: true,
+      email: true,
+      role: true,
+      profileImage: true,
+      createdAt: true,
+      updatedAt: true,
+      bio: true,
+      location: true,
+      website: true,
+    },
+  });
+  if (!user) {
+    return null;
+  }
+  return {
+    ...user,
+    profile_image: user.profileImage,
+    created_at: user.createdAt,
+    updated_at: user.updatedAt, // Add other mappings if strictly needed
+  };
 };
 
-export const findByUsername = async (username, client = pool) => {
-  const query =
-    "SELECT id, username, name, lastname, email, password, role, profile_image, created_at, bio, location, website FROM users WHERE username = $1";
-  const result = await client.query(query, [username]);
-  return result.rows[0];
+export const findByUsername = async (username) => {
+  const user = await prisma.user.findUnique({
+    where: { username },
+  });
+  if (!user) {
+    return null;
+  }
+  return {
+    ...user,
+    profile_image: user.profileImage,
+    created_at: user.createdAt,
+    updated_at: user.updatedAt,
+  };
 };
 
-export const create = async (userData, client = pool) => {
-  const { username, name, lastname, email, password, role } = userData;
-  const query = `
-      INSERT INTO users (username, name, lastname, email, password, role, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW())
-      RETURNING id, username, name, lastname, email, role, created_at
-    `;
-  const values = [
-    username,
-    name || null,
-    lastname || null,
-    email,
-    password,
-    role || "user",
-  ];
-  const result = await client.query(query, values);
-  return result.rows[0];
+export const create = async (userData) => {
+  const newUser = await prisma.user.create({
+    data: {
+      username: userData.username,
+      email: userData.email,
+      password: userData.password,
+      name: userData.name,
+      lastname: userData.lastname,
+      role: userData.role || 'user',
+    },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      lastname: true,
+      email: true,
+      role: true,
+      createdAt: true,
+    },
+  });
+  return { ...newUser, created_at: newUser.createdAt };
 };
 
-export const update = async (id, userData, client = pool) => {
-  const { username, name, lastname, password, role, bio, location, website } =
-    userData;
-  const query = `
-      UPDATE users SET
-        username = COALESCE($1, username),
-        name = COALESCE($2, name),
-        lastname = COALESCE($3, lastname),
-        password = COALESCE($4, password),
-        role = COALESCE($5, role),
-        bio = COALESCE($6, bio),
-        location = COALESCE($7, location),
-        website = COALESCE($8, website),
-        profile_image = COALESCE($9, profile_image),
-        updated_at = NOW()
-      WHERE id = $10
-      RETURNING id, username, name, lastname, email, role, created_at, bio, location, website, profile_image
-    `;
-  const values = [
-    username || null,
-    name || null,
-    lastname || null,
-    password || null,
-    role || null,
-    bio || null,
-    location || null,
-    website || null,
-    userData.profile_image || null,
-    id,
-  ];
-  const result = await client.query(query, values);
-  return result.rows[0];
+export const update = async (id, userData) => {
+  const data = {};
+  if (userData.username !== undefined) {
+    data.username = userData.username;
+  }
+  if (userData.name !== undefined) {
+    data.name = userData.name;
+  }
+  if (userData.lastname !== undefined) {
+    data.lastname = userData.lastname;
+  }
+  if (userData.password !== undefined) {
+    data.password = userData.password;
+  }
+  if (userData.role !== undefined) {
+    data.role = userData.role;
+  }
+  if (userData.bio !== undefined) {
+    data.bio = userData.bio;
+  }
+  if (userData.location !== undefined) {
+    data.location = userData.location;
+  }
+  if (userData.website !== undefined) {
+    data.website = userData.website;
+  }
+  if (userData.profile_image !== undefined) {
+    data.profileImage = userData.profile_image;
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: Number(id) },
+    data,
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      lastname: true,
+      email: true,
+      role: true,
+      createdAt: true,
+      bio: true,
+      location: true,
+      website: true,
+      profileImage: true,
+    },
+  });
+
+  return {
+    ...updatedUser,
+    profile_image: updatedUser.profileImage,
+    created_at: updatedUser.createdAt,
+  };
 };
 
-export const deleteById = async (id, client = pool) => {
-  const result = await client.query(
-    "DELETE FROM users WHERE id=$1 RETURNING id",
-    [id]
-  );
-  return result.rows[0];
+export const deleteById = async (id) => {
+  const deleted = await prisma.user.delete({
+    where: { id: Number(id) },
+    select: { id: true },
+  });
+  return deleted;
 };
 
-export const findProjectsByUserId = async (userId, client = pool) => {
-  const query = `
-    SELECT DISTINCT p.id, p.name, p.description, p.created_at, p.updated_at,
-           u.username AS creator_username,
-           COUNT(DISTINCT t.id) AS num_tasks
-    FROM projects p
-    LEFT JOIN users u ON p.creator_id = u.id
-    LEFT JOIN projects_users pu ON p.id = pu.project_id
-    LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted = false
-    WHERE p.creator_id = $1 OR pu.user_id = $1
-    GROUP BY p.id, u.username
-    ORDER BY p.created_at DESC
-  `;
-  const result = await client.query(query, [userId]);
-  return result.rows;
+export const findProjectsByUserId = async (userId) => {
+  const projects = await prisma.project.findMany({
+    where: {
+      OR: [
+        { creatorId: Number(userId) },
+        { users: { some: { userId: Number(userId) } } },
+      ],
+    },
+    include: {
+      creator: { select: { username: true } },
+      _count: { select: { tasks: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return (projects || []).map(transformProject);
 };
 
-export const findTasksByUserId = async (userId, client = pool) => {
-  const query = `
-    SELECT t.*, ts.name AS status,
-           p.name AS project_name,
-           json_agg(DISTINCT jsonb_build_object('id', tag.id, 'name', tag.name)) FILTER (WHERE tag.id IS NOT NULL) AS tags
-    FROM tasks t
-    LEFT JOIN task_statuses ts ON t.status_id = ts.id
-    LEFT JOIN projects p ON t.project_id = p.id
-    INNER JOIN tasks_users tu ON t.id = tu.task_id
-    LEFT JOIN tasks_tags tt ON t.id = tt.task_id
-    LEFT JOIN tags tag ON tt.tag_id = tag.id
-    WHERE tu.user_id = $1 AND t.deleted = false
-    GROUP BY t.id, ts.name, p.name
-    ORDER BY t.created_at DESC
-  `;
-  const result = await client.query(query, [userId]);
-  return result.rows;
+export const findTasksByUserId = async (userId) => {
+  const tasks = await prisma.task.findMany({
+    where: {
+      users: { some: { userId: Number(userId) } },
+      deleted: false,
+    },
+    include: {
+      status: true,
+      project: true,
+      tags: { include: { tag: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return (tasks || []).map(transformTask);
+};
+
+export const assignTasks = async (userId, taskIds) => {
+  if (!taskIds || taskIds.length === 0) {
+    return;
+  }
+
+  await prisma.tasksOnUsers.createMany({
+    data: taskIds.map((taskId) => ({
+      userId: Number(userId),
+      taskId: Number(taskId),
+    })),
+    skipDuplicates: true,
+  });
+};
+
+export const syncTasks = async (userId, taskIds) => {
+  // Safe check
+  if (!taskIds || !Array.isArray(taskIds)) {
+    return;
+  }
+
+  // Transaction to remove all and add new
+  await prisma.$transaction(async (tx) => {
+    // Remove all existing tasks for this user
+    await tx.tasksOnUsers.deleteMany({
+      where: { userId: Number(userId) },
+    });
+
+    if (taskIds.length > 0) {
+      await tx.tasksOnUsers.createMany({
+        data: taskIds.map((taskId) => ({
+          userId: Number(userId),
+          taskId: Number(taskId),
+        })),
+        skipDuplicates: true,
+      });
+    }
+  });
 };

@@ -18,6 +18,7 @@ import { globalErrorHandler } from './middleware/error.middleware.js';
 import { AppError } from './utils/AppError.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
+import helmet from 'helmet';
 import { limiter, hppMiddleware } from './middleware/security.middleware.js';
 const app = express();
 
@@ -26,7 +27,7 @@ const app = express();
 app.set('trust proxy', 1);
 app.disable('etag'); // Disable 304 Cache responses for dev clarity
 
-// app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 const allowedOrigins = [
   'http://localhost:5173', // Vue Dev Server
   'http://localhost:3000', // Backend/Old Dashboard
@@ -72,6 +73,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.get('/ping', (req, res) => res.send('pong'));
 
+// Security
 // Security
 app.use(limiter);
 app.use(hppMiddleware);

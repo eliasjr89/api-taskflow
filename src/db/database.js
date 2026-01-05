@@ -38,20 +38,6 @@ if (process.env.VERCEL && connectionString) {
   console.log('🔧 Removed sslmode parameter to use custom SSL config');
 }
 
-// Debug logging for Vercel
-console.log('🔍 Database connection debug:');
-console.log('  - Using DATABASE_URL_OVERRIDE:', !!env.DATABASE_URL_OVERRIDE);
-console.log(
-  '  - Connection string port:',
-  connectionString?.includes(':5432')
-    ? '5432 (direct)'
-    : connectionString?.includes(':6543')
-      ? '6543 (pooler)'
-      : 'unknown',
-);
-console.log('  - Environment:', env.NODE_ENV);
-console.log('  - Is Vercel:', !!process.env.VERCEL);
-
 const poolConfig = {
   max: env.PG_MAX_CLIENTS ? parseInt(env.PG_MAX_CLIENTS) : 20,
   idleTimeoutMillis: 30000,

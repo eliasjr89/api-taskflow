@@ -4,7 +4,6 @@ import * as UserRepository from '../repositories/userRepository.js';
 import { catchAsync } from '../utils/catchAsync.js';
 import { AppError } from '../utils/AppError.js';
 import * as AuditService from '../services/auditService.js';
-import bcrypt from 'bcrypt';
 
 // Para rutas de perfil autenticado
 export const getProfile = catchAsync(async (req, res) => {
@@ -90,25 +89,18 @@ export const getUserById = catchAsync(async (req, res) => {
 });
 
 export const createUser = catchAsync(async (req, res) => {
-  const { username, email, password, name, lastname } = req.body;
-
-  // Hash password
-  const hashedPassword = await bcrypt.hash(password, 12);
-
-  const newUser = await UserRepository.create({
-    username,
-    email,
-    password: hashedPassword,
-    name,
-    lastname,
-  });
+  const newUser = await UserService.createUser(req.body);
 
   await AuditService.logAction({
-    userId: req.user.userId, // Admin creating it (assuming this route is protected)
+    userId: req.user.userId,
     action: 'CREATE_USER',
     entityType: 'USER',
     entityId: newUser.id,
-    details: { username, email, role: newUser.role },
+    details: {
+      username: newUser.username,
+      email: newUser.email,
+      role: newUser.role,
+    },
     req,
   });
 

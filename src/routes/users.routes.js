@@ -16,15 +16,12 @@ import {
 import {
   createUserSchema,
   updateUserSchema,
-} from '../validators/userValidator.js';
-import Joi from 'joi';
+  getUserSchema,
+} from '../schemas/user.schema.js';
 
 const router = Router();
 
 // ID validator
-const idSchema = Joi.object({
-  id: Joi.number().integer().positive().required(),
-});
 
 /**
  * @swagger
@@ -50,7 +47,7 @@ router.get('/', getAllUsers);
  *     summary: Obtener usuario por ID
  *     tags: [Users]
  */
-router.get('/:id', validateParams(idSchema), getUserById);
+router.get('/:id', validateParams(getUserSchema), getUserById);
 
 /**
  * @swagger
@@ -76,7 +73,7 @@ router.post(
 router.put(
   '/:id',
   uploadAvatar.single('profile_image'),
-  validateParams(idSchema),
+  validateParams(getUserSchema),
   validateBody(updateUserSchema),
   updateUser,
 );
@@ -88,6 +85,6 @@ router.put(
  *     summary: Eliminar usuario
  *     tags: [Users]
  */
-router.delete('/:id', validateParams(idSchema), deleteUser);
+router.delete('/:id', validateParams(getUserSchema), deleteUser);
 
 export default router;

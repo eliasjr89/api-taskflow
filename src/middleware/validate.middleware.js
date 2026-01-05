@@ -7,33 +7,9 @@ import { AppError } from '../utils/AppError.js';
  * @param {string} property - Request property to validate ('body', 'query', 'params')
  * @returns {Function} Express middleware function
  */
-export const validate = (schema, property = 'body') => {
+export const validate = (schema, _property = 'body') => {
   return (req, res, next) => {
-    // 1. Support for Joi (legacy)
-    if (typeof schema.validate === 'function') {
-      const { error, value } = schema.validate(req[property], {
-        abortEarly: false,
-        stripUnknown: true,
-      });
-
-      if (error) {
-        const message = error.details
-          .map((detail) => detail.message)
-          .join(', ');
-        return next(new AppError(message, 400));
-      }
-
-      if (property === 'query' || property === 'params') {
-        Object.keys(req[property]).forEach((key) => delete req[property][key]);
-        Object.assign(req[property], value);
-      } else {
-        req[property] = value;
-      }
-      return next();
-    }
-
-    // 2. Support for Zod (new)
-    // We assume Zod schemas in this project define the full request structure (e.g. { body: ..., params: ... })
+    // Strictly support Zod
     if (typeof schema.safeParse === 'function') {
       const requestData = {
         body: req.body,

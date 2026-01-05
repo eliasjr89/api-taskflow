@@ -1,15 +1,15 @@
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getProfile,
   updateProfile,
   uploadUserAvatar,
   getUserProjects,
   getUserTasks,
-} from "../controllers/userController.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
-import { uploadAvatar } from "../middleware/upload.middleware.js";
-import { z } from "zod";
+} from '../controllers/userController.js';
+import { authMiddleware } from '../middleware/auth.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { uploadAvatar } from '../middleware/upload.middleware.js';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -38,7 +38,7 @@ const updateProfileSchema = z.object({
  *       200:
  *         description: Perfil del usuario
  */
-router.get("/profile", authMiddleware, getProfile);
+router.get('/profile', authMiddleware, getProfile);
 
 /**
  * @swagger
@@ -69,10 +69,10 @@ router.get("/profile", authMiddleware, getProfile);
  *         description: Perfil actualizado
  */
 router.put(
-  "/profile",
+  '/profile',
   authMiddleware,
   validate(updateProfileSchema),
-  updateProfile
+  updateProfile,
 );
 
 /**
@@ -95,10 +95,10 @@ router.put(
  *         description: Avatar actualizado
  */
 router.post(
-  "/avatar",
+  '/avatar',
   authMiddleware,
-  uploadAvatar.single("avatar"),
-  uploadUserAvatar
+  uploadAvatar.single('avatar'),
+  uploadUserAvatar,
 );
 
 /**
@@ -137,7 +137,7 @@ router.post(
  *                       num_tasks:
  *                         type: integer
  */
-router.get("/projects", authMiddleware, getUserProjects);
+router.get('/projects', authMiddleware, getUserProjects);
 
 /**
  * @swagger
@@ -181,6 +181,6 @@ router.get("/projects", authMiddleware, getUserProjects);
  *                         items:
  *                           type: object
  */
-router.get("/tasks", authMiddleware, getUserTasks);
+router.get('/tasks', authMiddleware, getUserTasks);
 
 export default router;

@@ -1,272 +1,306 @@
-// src/repositories/taskRepository.js
-import { pool } from "../db/database.js";
+import { prisma } from '../lib/prisma.js';
 
-export const findAll = async (
-  { user_id, project_id, status_id, priority, tag_id, limit, offset },
-  client = pool
-) => {
-  const filters = ["(t.deleted IS FALSE OR t.deleted IS NULL)"];
-  const values = [];
-  let idx = 1;
+// Helper to match legacy response format
+const transformTask = (task) => ({
+  id: task.id,
+  description: task.description,
+  project_id: task.projectId,
+  status_id: task.statusId,
+  priority: task.priority,
+  due_date: task.dueDate,
+  completed: task.completed,
+  created_at: task.createdAt,
+  updated_at: task.updatedAt,
+  project_name: task.project?.name,
+  status: task.status?.name,
+  users: task.users?.map((u) => u.user) || [],
+  tags: task.tags?.map((t) => t.tag) || [],
+});
+
+export const findAll = async ({
+  user_id,
+  project_id,
+  status_id,
+  priority,
+  tag_id,
+  limit,
+  offset,
+}) => {
+  const where = {
+    deleted: false,
+  };
 
   if (user_id) {
-    filters.push(
-      `t.id IN (SELECT task_id FROM tasks_users WHERE user_id=$${idx++})`
-    );
-    values.push(user_id);
+    where.users = {
+      some: {
+        userId: Number(user_id),
+      },
+    };
   }
   if (project_id) {
-    filters.push(`t.project_id=$${idx++}`);
-    values.push(project_id);
+    where.projectId = Number(project_id);
   }
   if (status_id) {
-    filters.push(`t.status_id=$${idx++}`);
-    values.push(status_id);
+    where.statusId = Number(status_id);
   }
   if (priority) {
-    filters.push(`t.priority=$${idx++}`);
-    values.push(priority);
+    where.priority = priority;
   }
   if (tag_id) {
-    filters.push(
-      `t.id IN (SELECT task_id FROM tasks_tags WHERE tag_id=$${idx++})`
-    );
-    values.push(tag_id);
+    where.tags = {
+      some: {
+        tagId: Number(tag_id),
+      },
+    };
   }
 
-  const whereClause = `WHERE ${filters.join(" AND ")}`;
+  const tasks = await prisma.task.findMany({
+    where,
+    include: {
+      project: { select: { name: true } },
+      status: { select: { name: true } },
+      users: {
+        include: {
+          user: {
+            select: { id: true, username: true, name: true, lastname: true },
+          },
+        },
+      },
+      tags: {
+        include: {
+          tag: { select: { id: true, name: true, color: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    skip: offset ? Number(offset) : undefined,
+    take: limit ? Number(limit) : undefined,
+  });
 
-  // Pagination params
-  values.push(limit);
-  values.push(offset);
-  const limitOffsetClause = `LIMIT $${idx++} OFFSET $${idx++}`;
-
-  const query = `
-      SELECT t.*, ts.name AS status, p.name AS project_name,
-             json_agg(DISTINCT jsonb_build_object('id', u.id, 'username', u.username, 'name', u.name, 'lastname', u.lastname)) FILTER (WHERE u.id IS NOT NULL) AS users,
-             json_agg(DISTINCT jsonb_build_object('id', tag.id, 'name', tag.name)) FILTER (WHERE tag.id IS NOT NULL) AS tags
-      FROM tasks t
-      LEFT JOIN task_statuses ts ON t.status_id = ts.id
-      LEFT JOIN projects p ON t.project_id = p.id
-      LEFT JOIN tasks_users tu ON t.id = tu.task_id
-      LEFT JOIN users u ON tu.user_id = u.id
-      LEFT JOIN tasks_tags tt ON t.id = tt.task_id
-      LEFT JOIN tags tag ON tt.tag_id = tag.id
-      ${whereClause}
-      GROUP BY t.id, ts.name, p.name
-      ORDER BY t.created_at DESC
-      ${limitOffsetClause}
-    `;
-
-  const countQuery = `
-    SELECT COUNT(DISTINCT t.id) 
-    FROM tasks t
-    LEFT JOIN tasks_users tu ON t.id = tu.task_id
-    LEFT JOIN tasks_tags tt ON t.id = tt.task_id
-    ${whereClause}
-  `;
-
-  const countValues = values.slice(0, -2); // remove limit and offset
-  const countRes = await client.query(countQuery, countValues);
-
-  const result = await client.query(query, values);
+  const total = await prisma.task.count({ where });
 
   return {
-    tasks: result.rows,
-    total: parseInt(countRes.rows[0].count, 10),
+    tasks: tasks.map(transformTask),
+    total,
   };
 };
 
-export const deleteById = async (id, client = pool) => {
-  // Hard delete dependencies first
-  await client.query("DELETE FROM tasks_users WHERE task_id=$1", [id]);
-  await client.query("DELETE FROM tasks_tags WHERE task_id=$1", [id]);
-  const res = await client.query("DELETE FROM tasks WHERE id=$1 RETURNING *", [
-    id,
-  ]);
-  return res.rows[0];
+export const deleteById = async (id, tx = prisma) => {
+  const task = await tx.task.delete({
+    where: { id: Number(id) },
+  });
+  return transformTask(task);
 };
 
-export const findById = async (id, client = pool) => {
-  const taskQuery = `
-      SELECT t.*, ts.name AS status
-      FROM tasks t
-      LEFT JOIN task_statuses ts ON t.status_id = ts.id
-      WHERE t.id = $1 AND t.deleted = false
-    `;
-  const taskResult = await client.query(taskQuery, [id]);
-  if (!taskResult.rows.length) {
+export const findById = async (id, tx = prisma) => {
+  const task = await tx.task.findUnique({
+    where: {
+      id: Number(id),
+    },
+    include: {
+      status: true,
+      users: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              lastname: true,
+              email: true,
+            },
+          },
+        },
+      },
+      tags: {
+        include: { tag: { select: { id: true, name: true, color: true } } },
+      },
+    },
+  });
+
+  if (!task || task.deleted) {
     return null;
   }
 
-  const task = taskResult.rows[0];
-
-  const usersQuery = `
-      SELECT u.id, u.username, u.name, u.lastname
-      FROM users u
-      JOIN tasks_users tu ON tu.user_id = u.id
-      WHERE tu.task_id = $1
-    `;
-  const usersResult = await client.query(usersQuery, [id]);
-  task.users = usersResult.rows;
-
-  const tagsQuery = `
-      SELECT tag.id, tag.name
-      FROM tags tag
-      JOIN tasks_tags tt ON tt.tag_id = tag.id
-      WHERE tt.task_id = $1
-    `;
-  const tagsResult = await client.query(tagsQuery, [id]);
-  task.tags = tagsResult.rows;
-
-  return task;
+  return transformTask(task);
 };
 
-export const create = async (taskData, client = pool) => {
+export const create = async (taskData, tx = prisma) => {
   const { description, project_id, status_id, priority, completed, due_date } =
     taskData;
 
-  const insertTask = `
-      INSERT INTO tasks (description, project_id, status_id, priority, completed, due_date, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,NOW())
-      RETURNING *
-    `;
-  const res = await client.query(insertTask, [
-    description,
-    project_id,
-    status_id,
-    priority || "low",
-    completed || false,
-    due_date || null,
-  ]);
-  return res.rows[0];
+  const task = await tx.task.create({
+    data: {
+      description,
+      projectId: Number(project_id),
+      statusId: Number(status_id),
+      priority: priority || 'low',
+      completed: completed || false,
+      dueDate: due_date || null,
+    },
+  });
+
+  return transformTask(task);
 };
 
-export const update = async (id, taskData, client = pool) => {
+export const update = async (id, taskData, tx = prisma) => {
   const { description, status_id, priority, completed, due_date } = taskData;
-  const updateQuery = `
-      UPDATE tasks SET
-        description = COALESCE($1, description),
-        status_id = COALESCE($2, status_id),
-        priority = COALESCE($3, priority),
-        completed = COALESCE($4, completed),
-        due_date = COALESCE($5, due_date),
-        updated_at = NOW()
-      WHERE id=$6
-      RETURNING *
-    `;
-  const res = await client.query(updateQuery, [
-    description || null,
-    status_id || null,
-    priority || null,
-    completed,
-    due_date || null,
-    id,
-  ]);
-  return res.rows[0];
+  const data = {};
+  if (description !== undefined) {
+    data.description = description;
+  }
+  if (status_id !== undefined) {
+    data.statusId = Number(status_id);
+  }
+  if (priority !== undefined) {
+    data.priority = priority;
+  }
+  if (completed !== undefined) {
+    data.completed = completed;
+  }
+  if (due_date !== undefined) {
+    data.dueDate = due_date;
+  }
+
+  const task = await tx.task.update({
+    where: { id: Number(id) },
+    data,
+  });
+
+  return transformTask(task);
 };
 
-export const deleteSoft = async (id, client = pool) => {
-  const res = await client.query(
-    "UPDATE tasks SET deleted=true, updated_at=NOW() WHERE id=$1 RETURNING *",
-    [id]
-  );
-  return res.rows[0];
+export const deleteSoft = async (id, tx = prisma) => {
+  const task = await tx.task.update({
+    where: { id: Number(id) },
+    data: { deleted: true },
+  });
+  return transformTask(task);
 };
 
-export const addUsers = async (taskId, userIds, client = pool) => {
-  for (const uid of userIds) {
-    await client.query(
-      "INSERT INTO tasks_users (task_id, user_id) VALUES ($1,$2)",
-      [taskId, uid]
-    );
+export const addUsers = async (taskId, userIds, tx = prisma) => {
+  await tx.tasksOnUsers.createMany({
+    data: userIds.map((uid) => ({
+      taskId: Number(taskId),
+      userId: Number(uid),
+    })),
+    skipDuplicates: true,
+  });
+};
+
+export const removeUser = async (taskId, userId, tx = prisma) => {
+  try {
+    await tx.tasksOnUsers.delete({
+      where: {
+        taskId_userId: {
+          taskId: Number(taskId),
+          userId: Number(userId),
+        },
+      },
+    });
+  } catch (error) {
+    if (error.code !== 'P2025') {
+      throw error;
+    }
   }
 };
 
-export const removeUser = async (taskId, userId, client = pool) => {
-  await client.query(
-    "DELETE FROM tasks_users WHERE task_id=$1 AND user_id=$2",
-    [taskId, userId]
-  );
+export const removeAllUsers = async (taskId, tx = prisma) => {
+  await tx.tasksOnUsers.deleteMany({
+    where: { taskId: Number(taskId) },
+  });
 };
 
-export const removeAllUsers = async (taskId, client = pool) => {
-  await client.query("DELETE FROM tasks_users WHERE task_id=$1", [taskId]);
+export const addTags = async (taskId, tagIds, tx = prisma) => {
+  await tx.tasksOnTags.createMany({
+    data: tagIds.map((tid) => ({
+      taskId: Number(taskId),
+      tagId: Number(tid),
+    })),
+    skipDuplicates: true,
+  });
 };
 
-export const addTags = async (taskId, tagIds, client = pool) => {
-  for (const tid of tagIds) {
-    await client.query(
-      "INSERT INTO tasks_tags (task_id, tag_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
-      [taskId, tid]
-    );
+export const removeTag = async (taskId, tagId, tx = prisma) => {
+  try {
+    await tx.tasksOnTags.delete({
+      where: {
+        taskId_tagId: {
+          taskId: Number(taskId),
+          tagId: Number(tagId),
+        },
+      },
+    });
+  } catch (error) {
+    if (error.code !== 'P2025') {
+      throw error;
+    }
   }
 };
 
-export const removeTag = async (taskId, tagId, client = pool) => {
-  await client.query("DELETE FROM tasks_tags WHERE task_id=$1 AND tag_id=$2", [
-    taskId,
-    tagId,
-  ]);
-};
-
-export const removeAllTags = async (taskId, client = pool) => {
-  await client.query("DELETE FROM tasks_tags WHERE task_id=$1", [taskId]);
+export const removeAllTags = async (taskId, tx = prisma) => {
+  await tx.tasksOnTags.deleteMany({
+    where: { taskId: Number(taskId) },
+  });
 };
 
 // Helper checks
-export const checkProjectExists = async (id, client = pool) => {
-  const res = await client.query("SELECT id FROM projects WHERE id=$1", [id]);
-  return res.rows.length > 0;
+export const checkProjectExists = async (id, tx = prisma) => {
+  const count = await tx.project.count({ where: { id: Number(id) } });
+  return count > 0;
 };
 
-export const checkStatusExists = async (id, client = pool) => {
-  const res = await client.query("SELECT id FROM task_statuses WHERE id=$1", [
-    id,
-  ]);
-  return res.rows.length > 0;
+export const checkStatusExists = async (id, tx = prisma) => {
+  const count = await tx.taskStatus.count({ where: { id: Number(id) } });
+  return count > 0;
 };
 
-export const checkUsersExist = async (userIds, client = pool) => {
+export const checkUsersExist = async (userIds, tx = prisma) => {
   if (!userIds || userIds.length === 0) {
     return true;
   }
-  const res = await client.query(
-    "SELECT id FROM users WHERE id = ANY($1::int[])",
-    [userIds]
-  );
-  return res.rows.length === userIds.length;
+  const count = await tx.user.count({
+    where: { id: { in: userIds.map(Number) } },
+  });
+  return count === userIds.length;
 };
 
-export const checkTagsExist = async (tagIds, client = pool) => {
+export const checkTagsExist = async (tagIds, tx = prisma) => {
   if (!tagIds || tagIds.length === 0) {
     return true;
   }
-  const res = await client.query(
-    "SELECT id FROM tags WHERE id = ANY($1::int[])",
-    [tagIds]
-  );
-  return res.rows.length === tagIds.length;
+  const count = await tx.tag.count({
+    where: { id: { in: tagIds.map(Number) } },
+  });
+  return count === tagIds.length;
 };
 
-export const getTaskUsers = async (taskId, client = pool) => {
-  const query = `
-    SELECT u.id, u.username, u.name, u.lastname, u.email
-    FROM users u
-    JOIN tasks_users tu ON tu.user_id = u.id
-    WHERE tu.task_id = $1
-  `;
-  const result = await client.query(query, [taskId]);
-  return result.rows;
+export const getTaskUsers = async (taskId, tx = prisma) => {
+  const relations = await tx.tasksOnUsers.findMany({
+    where: { taskId: Number(taskId) },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          lastname: true,
+          email: true,
+        },
+      },
+    },
+  });
+  return relations.map((r) => r.user);
 };
 
-export const getTaskTags = async (taskId, client = pool) => {
-  const query = `
-    SELECT tag.id, tag.name
-    FROM tags tag
-    JOIN tasks_tags tt ON tt.tag_id = tag.id
-    WHERE tt.task_id = $1
-  `;
-  const result = await client.query(query, [taskId]);
-  return result.rows;
+export const getTaskTags = async (taskId, tx = prisma) => {
+  const relations = await tx.tasksOnTags.findMany({
+    where: { taskId: Number(taskId) },
+    include: {
+      tag: {
+        select: { id: true, name: true },
+      },
+    },
+  });
+  return relations.map((r) => r.tag);
 };

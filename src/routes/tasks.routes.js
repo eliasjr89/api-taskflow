@@ -1,5 +1,5 @@
 // src/routes/tasks.routes.js
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getAllTasks,
   getTaskById,
@@ -12,47 +12,25 @@ import {
   removeTagFromTask,
   getTaskUsers,
   getTaskTags,
-} from "../controllers/taskController.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
+} from '../controllers/taskController.js';
+import { authMiddleware } from '../middleware/auth.middleware.js';
 import {
   validateBody,
   validateParams,
   validateQuery,
-} from "../middleware/validate.middleware.js";
+} from '../middleware/validate.middleware.js';
 import {
   createTaskSchema,
   updateTaskSchema,
+  getTaskSchema,
+  getTasksQuerySchema,
   addUsersToTaskSchema,
+  removeUserFromTaskSchema,
   addTagsToTaskSchema,
-} from "../validators/taskValidator.js";
-import Joi from "joi";
+  removeTagFromTaskSchema,
+} from '../schemas/task.schema.js';
 
 const router = Router();
-
-// ID validators
-const idSchema = Joi.object({
-  id: Joi.number().integer().positive().required(),
-});
-
-const userIdSchema = Joi.object({
-  id: Joi.number().integer().positive().required(),
-  userId: Joi.number().integer().positive().required(),
-});
-
-const tagIdSchema = Joi.object({
-  id: Joi.number().integer().positive().required(),
-  tagId: Joi.number().integer().positive().required(),
-});
-
-const querySchema = Joi.object({
-  page: Joi.number().integer().min(1).default(1),
-  limit: Joi.number().integer().min(1).max(1000).default(10),
-  project_id: Joi.number().integer().positive(),
-  status_id: Joi.number().integer().positive(),
-  priority: Joi.string().valid("low", "medium", "high", "urgent"),
-  user_id: Joi.number().integer().positive(),
-  tag_id: Joi.number().integer().positive(),
-});
 
 // Protect all routes
 router.use(authMiddleware);
@@ -64,7 +42,7 @@ router.use(authMiddleware);
  *     summary: Obtener todas las tareas
  *     tags: [Tasks]
  */
-router.get("/", validateQuery(querySchema), getAllTasks);
+router.get('/', validateQuery(getTasksQuerySchema), getAllTasks);
 
 /**
  * @swagger
@@ -73,7 +51,7 @@ router.get("/", validateQuery(querySchema), getAllTasks);
  *     summary: Obtener tarea por ID
  *     tags: [Tasks]
  */
-router.get("/:id", validateParams(idSchema), getTaskById);
+router.get('/:id', validateParams(getTaskSchema), getTaskById);
 
 /**
  * @swagger
@@ -82,7 +60,7 @@ router.get("/:id", validateParams(idSchema), getTaskById);
  *     summary: Crear una nueva tarea
  *     tags: [Tasks]
  */
-router.post("/", validateBody(createTaskSchema), createTask);
+router.post('/', validateBody(createTaskSchema), createTask);
 
 /**
  * @swagger
@@ -91,12 +69,7 @@ router.post("/", validateBody(createTaskSchema), createTask);
  *     summary: Actualizar tarea
  *     tags: [Tasks]
  */
-router.put(
-  "/:id",
-  validateParams(idSchema),
-  validateBody(updateTaskSchema),
-  updateTask
-);
+router.put('/:id', validateParams(updateTaskSchema), updateTask);
 
 /**
  * @swagger
@@ -105,34 +78,24 @@ router.put(
  *     summary: Eliminar tarea
  *     tags: [Tasks]
  */
-router.delete("/:id", validateParams(idSchema), deleteTask);
+router.delete('/:id', validateParams(getTaskSchema), deleteTask);
 
 // Task Users
-router.get("/:id/users", validateParams(idSchema), getTaskUsers);
-router.post(
-  "/:id/users",
-  validateParams(idSchema),
-  validateBody(addUsersToTaskSchema),
-  addUsersToTask
-);
+router.get('/:id/users', validateParams(getTaskSchema), getTaskUsers);
+router.post('/:id/users', validateBody(addUsersToTaskSchema), addUsersToTask);
 router.delete(
-  "/:id/users/:userId",
-  validateParams(userIdSchema),
-  removeUserFromTask
+  '/:id/users/:userId',
+  validateParams(removeUserFromTaskSchema),
+  removeUserFromTask,
 );
 
 // Task Tags
-router.get("/:id/tags", validateParams(idSchema), getTaskTags);
-router.post(
-  "/:id/tags",
-  validateParams(idSchema),
-  validateBody(addTagsToTaskSchema),
-  addTagsToTask
-);
+router.get('/:id/tags', validateParams(getTaskSchema), getTaskTags);
+router.post('/:id/tags', validateBody(addTagsToTaskSchema), addTagsToTask);
 router.delete(
-  "/:id/tags/:tagId",
-  validateParams(tagIdSchema),
-  removeTagFromTask
+  '/:id/tags/:tagId',
+  validateParams(removeTagFromTaskSchema),
+  removeTagFromTask,
 );
 
 export default router;

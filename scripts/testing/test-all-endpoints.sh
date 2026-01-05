@@ -96,13 +96,19 @@ echo "4️⃣  TAREAS"
 echo "═══════════════════════════════════════════════"
 
 test_endpoint "GET" "/tasks" "" "$ADMIN_TOKEN" "Obtener todas las tareas (admin)"
-test_endpoint "GET" "/tasks/8" "" "$ADMIN_TOKEN" "Obtener tarea por ID (admin)"
-test_endpoint "GET" "/tasks/8/users" "" "$ADMIN_TOKEN" "Obtener usuarios de la tarea (admin)"
-test_endpoint "GET" "/tasks/8/tags" "" "$ADMIN_TOKEN" "Obtener tags de la tarea (admin)"
+# Debug response
+echo "Response for ID extraction: $response"
+# Dynamically get ID from response (using jq to parse the JSON response stored in variable response)
+TASK_ID=$(echo $response | jq -r '.data[0].id')
+echo "ℹ️  Usando Task ID dinámico: $TASK_ID"
+
+test_endpoint "GET" "/tasks/$TASK_ID" "" "$ADMIN_TOKEN" "Obtener tarea por ID (admin)"
+test_endpoint "GET" "/tasks/$TASK_ID/users" "" "$ADMIN_TOKEN" "Obtener usuarios de la tarea (admin)"
+test_endpoint "GET" "/tasks/$TASK_ID/tags" "" "$ADMIN_TOKEN" "Obtener tags de la tarea (admin)"
 test_endpoint "GET" "/user/tasks" "" "$USER_TOKEN" "Obtener tareas del usuario (user)"
 
 # Actualizar tarea
-test_endpoint "PUT" "/tasks/8" '{"description":"Diseñar mockups actualizados","priority":"high"}' "$MANAGER_TOKEN" "Actualizar tarea (manager)"
+test_endpoint "PUT" "/tasks/$TASK_ID" '{"description":"Diseñar mockups actualizados","priority":"high"}' "$MANAGER_TOKEN" "Actualizar tarea (manager)"
 
 echo ""
 echo "═══════════════════════════════════════════════"
