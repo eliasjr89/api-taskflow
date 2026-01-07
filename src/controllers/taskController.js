@@ -2,6 +2,7 @@
 import * as TaskService from '../services/taskService.js';
 import * as AuditService from '../services/auditService.js';
 import { catchAsync } from '../utils/catchAsync.js';
+import { getIO } from '../lib/socket.js';
 
 export const getAllTasks = catchAsync(async (req, res) => {
   const filters = { ...req.query };
@@ -40,6 +41,15 @@ export const createTask = catchAsync(async (req, res) => {
     details: { description: task.description, project_id: task.project_id },
     req,
   });
+
+  // Emit Socket Event
+  try {
+    const io = getIO();
+    io.emit('task:created', task);
+  } catch (err) {
+    console.error('Socket emit failed:', err);
+  }
+
   res.status(201).json({
     success: true,
     message: 'Task created successfully',
@@ -61,6 +71,15 @@ export const updateTask = catchAsync(async (req, res) => {
     details: req.body,
     req,
   });
+
+  // Emit Socket Event
+  try {
+    const io = getIO();
+    io.emit('task:updated', task);
+  } catch (err) {
+    console.error('Socket emit failed:', err);
+  }
+
   res.status(200).json({
     success: true,
     message: 'Task updated successfully',
@@ -79,6 +98,15 @@ export const deleteTask = catchAsync(async (req, res) => {
     details: {},
     req,
   });
+
+  // Emit Socket Event
+  try {
+    const io = getIO();
+    io.emit('task:deleted', req.params.id);
+  } catch (err) {
+    console.error('Socket emit failed:', err);
+  }
+
   res.status(200).json({
     success: true,
     message: 'Task deleted successfully',

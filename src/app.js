@@ -14,6 +14,7 @@ import tagsRoutes from './routes/tags.routes.js';
 import taskStatusesRoutes from './routes/taskStatuses.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import announcementRoutes from './routes/announcement.routes.js';
 import { globalErrorHandler } from './middleware/error.middleware.js';
 import { AppError } from './utils/AppError.js';
 import swaggerUi from 'swagger-ui-express';
@@ -87,6 +88,7 @@ app.use('/taskflow/tags', tagsRoutes);
 app.use('/taskflow/task-statuses', taskStatusesRoutes);
 app.use('/taskflow/auth', authRoutes);
 app.use('/taskflow/admin', adminRoutes); // Admin routes
+app.use('/taskflow/announcements', announcementRoutes); // New Announcement routes
 
 // Swagger Docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

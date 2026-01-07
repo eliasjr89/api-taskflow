@@ -7,13 +7,27 @@ async function resetUsers() {
     console.log('🗑️  Limpiando base de datos...\n');
 
     // 1. Eliminar todos los usuarios y datos referenciales
+    // 1. Eliminar todos los usuarios y datos referenciales (Ordered by dependency)
+    await pool.query('DELETE FROM role_permissions');
+    await pool.query('DELETE FROM permissions');
+    // Roles deletions might fail if users reference them, so update users first or rely on cascade if configured?
+    // Users reference Roles. So delete Users first, then Roles.
+
     await pool.query('DELETE FROM audit_logs');
+    await pool.query('DELETE FROM active_sessions'); // New
+    await pool.query('DELETE FROM announcements'); // New
+    await pool.query('DELETE FROM webhooks'); // New
     await pool.query('DELETE FROM tasks_tags');
     await pool.query('DELETE FROM tags');
-    await pool.query('DELETE FROM tasks'); // Depende de status
+    await pool.query('DELETE FROM tasks');
     await pool.query('DELETE FROM task_statuses');
     await pool.query('DELETE FROM projects');
+
+    // Now safe to delete users and roles
     await pool.query('DELETE FROM users');
+    await pool.query('DELETE FROM roles');
+
+    await pool.query('DELETE FROM system_settings'); // New
     console.log('✅ Datos eliminados');
 
     // 2. Resetear el contador de IDs

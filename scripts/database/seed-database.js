@@ -41,6 +41,106 @@ async function seedDatabase() {
     }
     console.log(`   ✅ ${tags.length} etiquetas creadas\n`);
 
+    // 0.5. CREAR ROLES Y PERMISOS (RBAC)
+    console.log('🛡️  Configurando Roles y Permisos (RBAC)...');
+
+    // Define Permissions
+    const permissions = [
+      {
+        action: 'manage',
+        resource: 'all',
+        description: 'Full access to everything',
+      },
+      {
+        action: 'read',
+        resource: 'dashboard',
+        description: 'View dashboard metrics',
+      },
+      {
+        action: 'manage',
+        resource: 'users',
+        description: 'Create, update, delete users',
+      },
+      {
+        action: 'read',
+        resource: 'users',
+        description: 'View user list and profiles',
+      },
+      {
+        action: 'impersonate',
+        resource: 'users',
+        description: 'Login as another user',
+      },
+      {
+        action: 'view',
+        resource: 'audit_logs',
+        description: 'Access system audit logs',
+      },
+      {
+        action: 'manage',
+        resource: 'system',
+        description: 'System settings, maintenance mode',
+      },
+    ];
+
+    const permissionMap = new Map();
+
+    for (const p of permissions) {
+      const res = await pool.query(
+        'INSERT INTO permissions (action, resource, description, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) ON CONFLICT (action, resource) DO UPDATE SET description = EXCLUDED.description RETURNING id',
+        [p.action, p.resource, p.description],
+      );
+      permissionMap.set(`${p.action}:${p.resource}`, res.rows[0].id);
+    }
+    console.log(`   ✅ ${permissions.length} permisos definidos`);
+
+    // Define Roles
+    const roles = [
+      { name: 'admin', description: 'Super Administrator', isSystem: true },
+      { name: 'manager', description: 'Project Manager', isSystem: true },
+      { name: 'user', description: 'Standard User', isSystem: true },
+      { name: 'auditor', description: 'System Auditor', isSystem: false },
+    ];
+
+    const roleMap = new Map();
+
+    for (const r of roles) {
+      const res = await pool.query(
+        'INSERT INTO roles (name, description, is_system, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description RETURNING id',
+        [r.name, r.description, r.isSystem],
+      );
+      roleMap.set(r.name, res.rows[0].id);
+    }
+    console.log(`   ✅ ${roles.length} roles definidos`);
+
+    // Assign Permissions to Roles
+    const rolePermissions = [
+      // Admin: Everything
+      { role: 'admin', permission: 'manage:all' },
+
+      // Manager: Manage Users + Read Dashboard
+      { role: 'manager', permission: 'read:dashboard' },
+      { role: 'manager', permission: 'manage:users' },
+
+      // Auditor: Read Audit Logs + Read Users + Read Dashboard
+      { role: 'auditor', permission: 'read:dashboard' },
+      { role: 'auditor', permission: 'read:users' },
+      { role: 'auditor', permission: 'view:audit_logs' },
+    ];
+
+    for (const rp of rolePermissions) {
+      const rId = roleMap.get(rp.role);
+      const pId = permissionMap.get(rp.permission);
+
+      if (rId && pId) {
+        await pool.query(
+          'INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [rId, pId],
+        );
+      }
+    }
+    console.log('   ✅ Permisos asignados a roles\n');
+
     // 1. CREAR PROYECTOS
     console.log('📁 Creando proyectos...');
 

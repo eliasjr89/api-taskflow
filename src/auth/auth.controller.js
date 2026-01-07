@@ -5,7 +5,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { AppError } from '../utils/AppError.js';
 
 export const login = catchAsync(async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, loginType } = req.body;
 
   if (!email || !password) {
     return next(new AppError('Please provide email and password', 400));
@@ -13,7 +13,13 @@ export const login = catchAsync(async (req, res, next) => {
 
   // Delegate business logic to service
   try {
-    const { token, user } = await AuthService.login({ email, password });
+    const { token, user } = await AuthService.login({
+      email,
+      password,
+      loginType,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
 
     // Set HTTP Only Cookie
     const cookieOptions = {
@@ -29,7 +35,7 @@ export const login = catchAsync(async (req, res, next) => {
       action: 'LOGIN',
       entityType: 'USER',
       entityId: user.id,
-      details: { email: user.email },
+      details: { email: user.email, loginType },
       req,
     });
 

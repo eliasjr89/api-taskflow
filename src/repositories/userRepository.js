@@ -65,15 +65,33 @@ export const findAll = async () => {
 export const findByEmail = async (email) => {
   const user = await prisma.user.findUnique({
     where: { email },
+    include: {
+      roleRel: {
+        include: {
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+      },
+    },
   });
   if (!user) {
     return null;
   }
+
+  const permissions =
+    user.roleRel?.permissions.map(
+      (p) => `${p.permission.action}:${p.permission.resource}`,
+    ) || [];
+
   return {
     ...user,
     profile_image: user.profileImage,
     created_at: user.createdAt,
     updated_at: user.updatedAt,
+    permissions,
   };
 };
 
@@ -93,16 +111,33 @@ export const findById = async (id) => {
       bio: true,
       location: true,
       website: true,
+      roleRel: {
+        include: {
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+      },
     },
   });
   if (!user) {
     return null;
   }
+
+  // Flatten permissions for easier access
+  const permissions =
+    user.roleRel?.permissions.map(
+      (p) => `${p.permission.action}:${p.permission.resource}`,
+    ) || [];
+
   return {
     ...user,
     profile_image: user.profileImage,
     created_at: user.createdAt,
-    updated_at: user.updatedAt, // Add other mappings if strictly needed
+    updated_at: user.updatedAt,
+    permissions, // Array of 'action:resource' strings
   };
 };
 
@@ -200,11 +235,19 @@ export const update = async (id, userData) => {
 };
 
 export const deleteById = async (id) => {
-  const deleted = await prisma.user.delete({
-    where: { id: Number(id) },
-    select: { id: true },
+  return await prisma.$transaction(async (tx) => {
+    // Delete dependencies that don't cascade automatically (AuditLogs)
+    await tx.auditLog.deleteMany({
+      where: { userId: Number(id) },
+    });
+
+    // Now delete the user
+    const deleted = await tx.user.delete({
+      where: { id: Number(id) },
+      select: { id: true },
+    });
+    return deleted;
   });
-  return deleted;
 };
 
 export const findProjectsByUserId = async (userId) => {
@@ -278,5 +321,32 @@ export const syncTasks = async (userId, taskIds) => {
         skipDuplicates: true,
       });
     }
+  });
+};
+
+export const createSession = async (data) => {
+  return await prisma.activeSession.create({
+    data: {
+      userId: Number(data.userId),
+      tokenHash: data.tokenHash || 'placeholder-' + Date.now(),
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+    },
+  });
+};
+
+export const deleteSession = async (sessionId) => {
+  try {
+    await prisma.activeSession.delete({
+      where: { id: sessionId },
+    });
+  } catch {
+    // Ignore if not found
+  }
+};
+
+export const findSessionById = async (sessionId) => {
+  return await prisma.activeSession.findUnique({
+    where: { id: sessionId },
   });
 };

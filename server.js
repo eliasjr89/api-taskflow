@@ -2,6 +2,7 @@ import 'dotenv/config';
 import app from './src/app.js';
 import { prisma } from './src/lib/prisma.js';
 import { env } from './src/config/env.js';
+import { initSocket } from './src/lib/socket.js';
 
 const PORT = env.PORT;
 
@@ -15,6 +16,9 @@ const startServer = async () => {
         `Swagger Docs available at http://localhost:${PORT}/api-docs`,
       );
     });
+
+    // Initialize Socket.io
+    initSocket(server);
 
     const shutdown = (signal) => {
       console.log(`Received ${signal}. Shutting down gracefully...`);

@@ -48,16 +48,18 @@ if (connectionString) {
   poolConfig.connectionString = connectionString;
 
   // SSL configuration for cloud providers (Supabase, Neon, etc.)
-  // Supabase uses certificates that Node.js v22+ considers self-signed
-  // This configuration is safe because the connection is still encrypted
-  poolConfig.ssl = {
-    rejectUnauthorized: false,
-    // Additional options for maximum compatibility
-    checkServerIdentity: () => undefined,
-    secureOptions: 0, // Disable all SSL verification
-  };
-
-  console.log('🔒 SSL Config applied:', { rejectUnauthorized: false });
+  if (env.NODE_ENV === 'development' && !process.env.VERCEL) {
+    poolConfig.ssl = false;
+    console.log('🔒 SSL Disabled for local development');
+  } else {
+    // Supabase uses certificates that Node.js v22+ considers self-signed
+    poolConfig.ssl = {
+      rejectUnauthorized: false,
+      checkServerIdentity: () => undefined,
+      secureOptions: 0, // Disable all SSL verification
+    };
+    console.log('🔒 SSL Config applied:', { rejectUnauthorized: false });
+  }
 } else {
   poolConfig.host = env.DB_HOST;
   poolConfig.port = env.DB_PORT;

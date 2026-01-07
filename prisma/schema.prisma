@@ -27,6 +27,11 @@ model User {
   projects        ProjectsOnUsers[]
   tasks           TasksOnUsers[]
   auditLogs       AuditLog[]
+  sessions        ActiveSession[]
+  announcements   Announcement[]
+  
+  roleId          Int?     @map("role_id")
+  roleRel         Role?    @relation(fields: [roleId], references: [id])
 
   @@map("users")
 }
@@ -135,4 +140,98 @@ model AuditLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+// --- NEW ADMIN FEATURES MODELS ---
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique // 'admin', 'manager', 'user', 'auditor'
+  description String?
+  isSystem    Boolean          @default(false) @map("is_system") // If true, cannot be deleted
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  action      String           // e.g. 'create', 'read', 'update', 'delete', 'manage'
+  resource    String           // e.g. 'task', 'project', 'user', 'system'
+  description String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  roles       RolePermission[]
+
+  @@unique([action, resource])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int @map("role_id")
+  permissionId Int @map("permission_id")
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model SystemSetting {
+  key         String   @id
+  value       String   // JSON stringified value
+  description String?
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model ActiveSession {
+  id           String   @id @default(uuid())
+  userId       Int      @map("user_id")
+  tokenHash    String   @unique // Store hash of token to verify/revoke
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  deviceType   String?  @map("device_type") // 'mobile', 'desktop', 'tablet'
+  lastActiveAt DateTime @default(now()) @map("last_active_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("active_sessions")
+}
+
+model Webhook {
+  id          Int      @id @default(autoincrement())
+  name        String
+  url         String
+  events      String[] // Array of event names: 'task.created', 'user.login'
+  secret      String?  // For signing payloads
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("webhooks")
+}
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  title       String
+  message     String
+  type        String   @default("info") // info, warning, error, success
+  isActive    Boolean  @default(true) @map("is_active")
+  startsAt    DateTime @default(now()) @map("starts_at")
+  endsAt      DateTime? @map("ends_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   Int?     @map("created_by")
+
+  creator     User?    @relation(fields: [createdBy], references: [id])
+
+  @@map("announcements")
 }

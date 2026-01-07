@@ -1,8 +1,10 @@
 import { prisma } from '../lib/prisma.js';
 import * as TaskRepository from '../repositories/taskRepository.js';
+import * as WebhookService from '../services/webhookService.js';
 import { AppError } from '../utils/AppError.js';
 
 export const getAllTasks = async (filters = {}) => {
+  // ... existing getAllTasks
   const page = Number(filters.page) || 1;
   const limit = Number(filters.limit) || 10;
   const offset = (page - 1) * limit;
@@ -75,7 +77,14 @@ export const createTask = async (taskData) => {
   );
 
   // Fetch complete task with relations to return
-  return TaskRepository.findById(task.id);
+  const finalTask = await TaskRepository.findById(task.id);
+
+  // Trigger Webhook (async, don't block)
+  WebhookService.trigger('task.created', finalTask).catch((err) =>
+    console.error('Webhook trigger failed', err.message),
+  );
+
+  return finalTask;
 };
 
 export const updateTask = async (taskId, taskData) => {
@@ -132,7 +141,14 @@ export const updateTask = async (taskId, taskData) => {
   );
 
   // Return fresh data with relations
-  return TaskRepository.findById(updatedTask.id);
+  const finalTask = await TaskRepository.findById(updatedTask.id);
+
+  // Trigger Webhook
+  WebhookService.trigger('task.updated', finalTask).catch((err) =>
+    console.error('Webhook trigger failed', err.message),
+  );
+
+  return finalTask;
 };
 
 export const deleteTask = async (taskId) => {

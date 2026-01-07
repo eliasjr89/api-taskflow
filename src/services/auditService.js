@@ -44,9 +44,26 @@ export const logAction = async ({
  * Fetch recent audit logs for admin dashboard.
  * @param {number} limit
  */
-export const getRecentLogs = async (limit = 50) => {
+export const getRecentLogs = async ({
+  limit = 50,
+  action,
+  entityType,
+  userId,
+}) => {
+  const where = {};
+  if (action) {
+    where.action = { contains: action, mode: 'insensitive' };
+  }
+  if (entityType) {
+    where.entityType = entityType;
+  }
+  if (userId) {
+    where.userId = Number(userId);
+  }
+
   const logs = await prisma.auditLog.findMany({
     take: Number(limit),
+    where,
     orderBy: { createdAt: 'desc' },
     include: {
       user: {
