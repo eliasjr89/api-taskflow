@@ -1,9 +1,9 @@
 // src/services/authService.js
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import * as UserRepository from "../repositories/userRepository.js";
-import { AppError } from "../utils/AppError.js";
-import { env } from "../config/env.js";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import * as UserRepository from '../repositories/userRepository.js';
+import { AppError } from '../utils/AppError.js';
+import { env } from '../config/env.js';
 
 const signToken = (id, role, sessionId) => {
   return jwt.sign({ userId: id, role, sessionId }, env.JWT_SECRET, {
@@ -21,35 +21,35 @@ export const login = async ({
   const user = await UserRepository.findByEmail(email);
 
   if (!user) {
-    throw new AppError("Invalid credentials", 401);
+    throw new AppError('Invalid credentials', 401);
   }
 
   const validPassword = await bcrypt.compare(password, user.password);
 
   if (!validPassword) {
-    throw new AppError("Invalid credentials", 401);
+    throw new AppError('Invalid credentials', 401);
   }
 
   // Role-based login enforcement
-  console.log("🔍 Login attempt:", { email, loginType, userRole: user.role });
+  console.log('🔍 Login attempt:', { email, loginType, userRole: user.role });
 
-  if (loginType === "user" && user.role !== "user") {
-    console.log("❌ Role mismatch: Admin trying to use User form");
+  if (loginType === 'user' && user.role !== 'user') {
+    console.log('❌ Role mismatch: Admin trying to use User form');
     throw new AppError(
-      "This account is an administrator account. Please use the Admin login form.",
-      403
+      'This account is an administrator account. Please use the Admin login form.',
+      403,
     );
   }
 
-  if (loginType === "admin" && user.role === "user") {
-    console.log("❌ Role mismatch: User trying to use Admin form");
+  if (loginType === 'admin' && user.role === 'user') {
+    console.log('❌ Role mismatch: User trying to use Admin form');
     throw new AppError(
-      "This account is a regular user account. Please use the User login form.",
-      403
+      'This account is a regular user account. Please use the User login form.',
+      403,
     );
   }
 
-  console.log("✅ Role validation passed");
+  console.log('✅ Role validation passed');
 
   // Create Active Session
   const session = await UserRepository.createSession({
@@ -94,7 +94,7 @@ export const impersonate = async (adminUserId, targetUserId) => {
   // Verify admin has permission? Middleware does most, but logic here too.
   const targetUser = await UserRepository.findById(targetUserId);
   if (!targetUser) {
-    throw new AppError("User not found", 404);
+    throw new AppError('User not found', 404);
   }
 
   // Mark session as impersonated?
@@ -102,7 +102,7 @@ export const impersonate = async (adminUserId, targetUserId) => {
   const session = await UserRepository.createSession({
     userId: targetUser.id,
     userAgent: `Impersonated by Admin ${adminUserId}`,
-    ipAddress: "Internal",
+    ipAddress: 'Internal',
   });
 
   const token = signToken(targetUser.id, targetUser.role, session.id);
@@ -114,24 +114,32 @@ export const impersonate = async (adminUserId, targetUserId) => {
 };
 
 export const register = async (userData) => {
-  const existingUser = await UserRepository.findByEmail(userData.email);
+  const { ipAddress, userAgent, ...rest } = userData;
+
+  const existingUser = await UserRepository.findByEmail(rest.email);
   if (existingUser) {
-    throw new AppError("Email already in use", 400);
+    throw new AppError('Email already in use', 400);
   }
 
-  const existingUsername = await UserRepository.findByUsername(
-    userData.username
-  );
+  const existingUsername = await UserRepository.findByUsername(rest.username);
   if (existingUsername) {
-    throw new AppError("Username already in use", 400);
+    throw new AppError('Username already in use', 400);
   }
 
-  const hashedPassword = await bcrypt.hash(userData.password, 12);
+  const hashedPassword = await bcrypt.hash(rest.password, 12);
   const newUser = await UserRepository.create({
-    ...userData,
+    ...rest,
     password: hashedPassword,
   });
 
-  const token = signToken(newUser.id, newUser.role);
+  // Create Active Session
+  const session = await UserRepository.createSession({
+    userId: newUser.id,
+    ipAddress,
+    userAgent,
+    tokenHash: `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+  });
+
+  const token = signToken(newUser.id, newUser.role, session.id);
   return { token, user: newUser };
 };

@@ -56,12 +56,42 @@ export const createProject = async (data, creatorId) => {
   );
 };
 
-export const updateProject = async (id, data) => {
+export const updateProject = async (id, data, user) => {
   return await prisma.$transaction(
     async (tx) => {
       const existingProject = await ProjectRepository.findById(id, tx);
       if (!existingProject) {
         throw new AppError('Project not found', 404);
+      }
+
+      const userId = user.id || user.userId;
+      const isAdmin =
+        user.role === 'admin' ||
+        (user.permissions && user.permissions.includes('manage:all'));
+      const isManager = user.role === 'manager';
+
+      // Check membership
+      const membership = await tx.projectsOnUsers.findUnique({
+        where: {
+          projectId_userId: {
+            projectId: Number(id),
+            userId: Number(userId),
+          },
+        },
+      });
+
+      // IDOR Protection: Only creator, admin/manager, or member can update
+      if (
+        userId &&
+        existingProject.creator_id !== userId &&
+        !isAdmin &&
+        !isManager &&
+        !membership
+      ) {
+        throw new AppError(
+          'You do not have permission to update this project',
+          403,
+        );
       }
 
       const updated = await ProjectRepository.update(id, data, tx);
@@ -87,10 +117,28 @@ export const updateProject = async (id, data) => {
   );
 };
 
-export const deleteProject = async (id) => {
+export const deleteProject = async (id, user) => {
   return await prisma.$transaction(
     async (tx) => {
       // Clean relations
+      const existingProject = await ProjectRepository.findById(id, tx);
+      if (!existingProject) {
+        throw new AppError('Project not found', 404);
+      }
+
+      const userId = user.id || user.userId;
+      const isAdmin =
+        user.role === 'admin' ||
+        (user.permissions && user.permissions.includes('manage:all'));
+
+      if (userId && existingProject.creator_id !== userId && !isAdmin) {
+        throw new AppError(
+          'You do not have permission to delete this project',
+          403,
+        );
+      }
+
+      await ProjectRepository.removeAllUsers(id, tx);
       await ProjectRepository.removeAllUsers(id, tx);
       // Tasks are handled by DB cascade or orphaned. Legacy code didn't delete them explicitely.
 

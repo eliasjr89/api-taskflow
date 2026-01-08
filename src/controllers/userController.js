@@ -149,7 +149,6 @@ export const deleteUser = catchAsync(async (req, res) => {
 });
 
 // Obtener proyectos del usuario autenticado
-// Obtener proyectos del usuario autenticado
 export const getUserProjects = catchAsync(async (req, res) => {
   const userId = req.user.userId;
   const projects = await UserRepository.findProjectsByUserId(userId);

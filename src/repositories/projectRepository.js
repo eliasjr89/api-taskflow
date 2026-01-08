@@ -5,8 +5,8 @@ const transformProject = (project) => ({
   id: project.id,
   name: project.name,
   description: project.description,
-  color: 'indigo', // Default as schema doesn't have it yet, or add to schema if critical
-  icon: 'Folder', // Default
+  color: project.color || 'indigo',
+  icon: project.icon || 'Folder',
   created_at: project.createdAt,
   updated_at: project.updatedAt,
   creator_id: project.creatorId,
@@ -71,26 +71,33 @@ export const findById = async (id, tx = prisma) => {
 };
 
 export const create = async (projectData, creatorId, tx = prisma) => {
-  const { name, description } = projectData;
+  const { name, description, color, icon } = projectData;
   const project = await tx.project.create({
     data: {
       name,
       description,
       creatorId: Number(creatorId),
-      // color/icon ignored as per current schema, add if needed
+      color: color || 'indigo',
+      icon: icon || 'Folder',
     },
   });
   return transformProject(project);
 };
 
 export const update = async (id, projectData, tx = prisma) => {
-  const { name, description } = projectData;
+  const { name, description, color, icon } = projectData;
   const data = {};
   if (name !== undefined) {
     data.name = name;
   }
   if (description !== undefined) {
     data.description = description;
+  }
+  if (color !== undefined) {
+    data.color = color;
+  }
+  if (icon !== undefined) {
+    data.icon = icon;
   }
 
   const project = await tx.project.update({

@@ -4,6 +4,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import * as AuditService from '../services/auditService.js';
 import * as AdminService from '../services/adminService.js';
 import * as AuthService from '../services/authService.js';
+import * as UserRepository from '../repositories/userRepository.js';
 
 export const resetDatabase = catchAsync(async (req, res) => {
   const client = await pool.connect();
@@ -197,27 +198,7 @@ export const impersonateUser = catchAsync(async (req, res) => {
 
 export const getUserSessions = catchAsync(async (req, res) => {
   const { id } = req.params;
-  // Import Repository dynamically or move import to top if used frequently.
-  // Assuming UserRepository is needed.
-  // But wait, adminController uses Services mostly. Ideally AdminService should wrap this.
-  // For speed, let's use Repository directly here or verify AdminService usage.
-  // Let's use direct repo call for now as per previous pattern or better, add to AdminService?
-  // Previous code uses Services. Let's add to AdminService properly?
-  // AdminService.js logic is simpler. Let's stick to pattern:
-  // We'll import UserRepository at the top if not present, but better to put logic in AdminService.
-  // ACTUALLY, let's just use prisma direct or repo.
-  // I will add the method to AdminService first to be clean?
-  // No, let's just do it here to save roundtrips.
-
-  // Need to import UserRepository.
-  // Current imports: pool, bcrypt, catchAsync, AuditService, AdminService, AuthService.
-  // I will use dynamic import of UserRepository or assume I can add it.
-
-  const { findSessionsByUserId } = await import(
-    '../repositories/userRepository.js'
-  );
-
-  const sessions = await findSessionsByUserId(id);
+  const sessions = await UserRepository.findSessionsByUserId(id);
   res.status(200).json({
     success: true,
     data: sessions,
@@ -226,7 +207,6 @@ export const getUserSessions = catchAsync(async (req, res) => {
 
 export const killUserSession = catchAsync(async (req, res) => {
   const { sessionId } = req.params;
-  const { deleteSession } = await import('../repositories/userRepository.js');
-  await deleteSession(sessionId);
+  await UserRepository.deleteSession(sessionId);
   res.status(200).json({ success: true, message: 'Session terminated' });
 });

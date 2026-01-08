@@ -51,7 +51,11 @@ export const login = catchAsync(async (req, res, next) => {
 });
 
 export const register = catchAsync(async (req, res) => {
-  const { token, user } = await AuthService.register(req.body);
+  const { token, user } = await AuthService.register({
+    ...req.body,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
 
   await AuditService.logAction({
     userId: user.id,

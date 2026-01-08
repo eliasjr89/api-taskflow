@@ -1,9 +1,0 @@
-nohup: ignoring input
-[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
-🔒 SSL Config applied: { rejectUnauthorized: false }
-Database connected via Prisma
-Server running on http://localhost:3000
-Swagger Docs available at http://localhost:3000/api-docs
-[0mGET /taskflow/tasks [33m401[0m 16.880 ms - 27[0m
-Received SIGTERM. Shutting down gracefully...
-HTTP server closed.

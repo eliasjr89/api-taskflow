@@ -12,6 +12,8 @@ const transformTask = (task) => ({
   created_at: task.createdAt,
   updated_at: task.updatedAt,
   project_name: task.project?.name,
+  project_color: task.project?.color,
+  project_icon: task.project?.icon,
   status: task.status?.name,
   users: task.users?.map((u) => u.user) || [],
   tags: task.tags?.map((t) => t.tag) || [],
@@ -57,7 +59,7 @@ export const findAll = async ({
   const tasks = await prisma.task.findMany({
     where,
     include: {
-      project: { select: { name: true } },
+      project: { select: { name: true, color: true, icon: true } },
       status: { select: { name: true } },
       users: {
         include: {
@@ -72,7 +74,7 @@ export const findAll = async ({
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { id: 'asc' },
     skip: offset ? Number(offset) : undefined,
     take: limit ? Number(limit) : undefined,
   });
@@ -98,6 +100,7 @@ export const findById = async (id, tx = prisma) => {
       id: Number(id),
     },
     include: {
+      project: { select: { name: true, color: true, icon: true } },
       status: true,
       users: {
         include: {

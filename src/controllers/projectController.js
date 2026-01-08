@@ -39,7 +39,11 @@ export const createProject = catchAsync(async (req, res) => {
 });
 
 export const updateProject = catchAsync(async (req, res) => {
-  const project = await ProjectService.updateProject(req.params.id, req.body);
+  const project = await ProjectService.updateProject(
+    req.params.id,
+    req.body,
+    req.user,
+  );
   await AuditService.logAction({
     userId: req.user.userId,
     action: 'UPDATE_PROJECT',
@@ -56,7 +60,7 @@ export const updateProject = catchAsync(async (req, res) => {
 });
 
 export const deleteProject = catchAsync(async (req, res) => {
-  await ProjectService.deleteProject(req.params.id);
+  await ProjectService.deleteProject(req.params.id, req.user);
   await AuditService.logAction({
     userId: req.user.userId,
     action: 'DELETE_PROJECT',

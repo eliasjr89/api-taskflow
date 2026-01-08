@@ -19,6 +19,7 @@ model User {
   bio          String?
   location     String?
   website      String?
+  socialLinks  Json?    @map("social_links")
   profileImage String?  @map("profile_image")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
@@ -41,6 +42,8 @@ model Project {
   name        String
   description String?
   creatorId   Int      @map("creator_id")
+  color       String   @default("indigo")
+  icon        String   @default("Folder")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 

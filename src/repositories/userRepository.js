@@ -45,6 +45,7 @@ export const findAll = async () => {
       bio: true,
       location: true,
       website: true,
+      socialLinks: true,
       _count: {
         select: { tasks: true, projects: true },
       },
@@ -54,6 +55,7 @@ export const findAll = async () => {
   // Map to snake_case for backward compatibility
   return usersWithCounts.map((u) => ({
     ...u,
+    social_links: u.socialLinks,
     profile_image: u.profileImage,
     created_at: u.createdAt,
     updated_at: u.updatedAt,
@@ -111,6 +113,7 @@ export const findById = async (id) => {
       bio: true,
       location: true,
       website: true,
+      socialLinks: true,
       roleRel: {
         include: {
           permissions: {
@@ -134,6 +137,7 @@ export const findById = async (id) => {
 
   return {
     ...user,
+    social_links: user.socialLinks,
     profile_image: user.profileImage,
     created_at: user.createdAt,
     updated_at: user.updatedAt,
@@ -208,6 +212,9 @@ export const update = async (id, userData) => {
   if (userData.profile_image !== undefined) {
     data.profileImage = userData.profile_image;
   }
+  if (userData.social_links !== undefined) {
+    data.socialLinks = userData.social_links;
+  }
 
   const updatedUser = await prisma.user.update({
     where: { id: Number(id) },
@@ -223,12 +230,14 @@ export const update = async (id, userData) => {
       bio: true,
       location: true,
       website: true,
+      socialLinks: true,
       profileImage: true,
     },
   });
 
   return {
     ...updatedUser,
+    social_links: updatedUser.socialLinks,
     profile_image: updatedUser.profileImage,
     created_at: updatedUser.createdAt,
   };
