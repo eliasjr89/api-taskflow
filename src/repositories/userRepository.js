@@ -160,7 +160,16 @@ export const findByUsername = async (username) => {
   };
 };
 
+// Helper to find role by name
+const findRoleByName = async (name) => {
+  return await prisma.role.findUnique({ where: { name } });
+};
+
 export const create = async (userData) => {
+  // Try to find the corresponding role record
+  const roleName = userData.role || 'user';
+  const roleRecord = await findRoleByName(roleName);
+
   const newUser = await prisma.user.create({
     data: {
       username: userData.username,
@@ -168,7 +177,8 @@ export const create = async (userData) => {
       password: userData.password,
       name: userData.name,
       lastname: userData.lastname,
-      role: userData.role || 'user',
+      role: roleName,
+      roleId: roleRecord?.id, // Auto-link to Role table
     },
     select: {
       id: true,
@@ -177,6 +187,7 @@ export const create = async (userData) => {
       lastname: true,
       email: true,
       role: true,
+      roleId: true,
       createdAt: true,
     },
   });
@@ -199,6 +210,15 @@ export const update = async (id, userData) => {
   }
   if (userData.role !== undefined) {
     data.role = userData.role;
+    // If updating role string, try to update roleId too
+    const roleRecord = await findRoleByName(userData.role);
+    if (roleRecord) {
+      data.roleId = roleRecord.id;
+    }
+  }
+  // Allow direct roleId update if needed
+  if (userData.roleId !== undefined) {
+    data.roleId = userData.roleId;
   }
   if (userData.bio !== undefined) {
     data.bio = userData.bio;
@@ -226,6 +246,7 @@ export const update = async (id, userData) => {
       lastname: true,
       email: true,
       role: true,
+      roleId: true,
       createdAt: true,
       bio: true,
       location: true,
@@ -241,6 +262,18 @@ export const update = async (id, userData) => {
     profile_image: updatedUser.profileImage,
     created_at: updatedUser.createdAt,
   };
+};
+
+export const syncLegacyRole = async (userId, roleName) => {
+  const roleRecord = await findRoleByName(roleName);
+  if (roleRecord) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { roleId: roleRecord.id },
+    });
+    return roleRecord.id;
+  }
+  return null;
 };
 
 export const deleteById = async (id) => {

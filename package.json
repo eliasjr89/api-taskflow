@@ -11,6 +11,7 @@
     "test:endpoints": "bash scripts/testing/test-all-endpoints.sh",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "build": "echo 'No build necessary for Node.js backend'"
   },
   "keywords": [],

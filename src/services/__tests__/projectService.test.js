@@ -3,7 +3,13 @@ import { jest } from '@jest/globals';
 // Define mocks
 jest.unstable_mockModule('../../lib/prisma.js', () => ({
   prisma: {
-    $transaction: jest.fn((callback) => callback({})), // Mock transaction to just execute callback
+    $transaction: jest.fn((callback) =>
+      callback({
+        projectsOnUsers: {
+          findUnique: jest.fn(),
+        },
+      }),
+    ),
   },
 }));
 
@@ -49,8 +55,9 @@ describe('ProjectService', () => {
       ProjectRepository.findById.mockResolvedValue(mockProject);
 
       // We expect this to FAIL now with 403
+      const attacker = { id: 999, role: 'user' };
       await expect(
-        ProjectService.updateProject(1, updateData, 999),
+        ProjectService.updateProject(1, updateData, attacker),
       ).rejects.toThrow('You do not have permission to update this project');
 
       expect(ProjectRepository.update).not.toHaveBeenCalled();

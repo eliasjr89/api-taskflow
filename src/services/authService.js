@@ -30,18 +30,29 @@ export const login = async ({
     throw new AppError('Invalid credentials', 401);
   }
 
-  // Role-based login enforcement
-  console.log('🔍 Login attempt:', { email, loginType, userRole: user.role });
+  // Determine effective role (Role Relation takes precedence over legacy string)
+  const effectiveRole = (
+    user.roleRel?.name ||
+    user.role ||
+    'user'
+  ).toLowerCase();
 
-  if (loginType === 'user' && user.role !== 'user') {
-    console.log('❌ Role mismatch: Admin trying to use User form');
+  console.log('🔍 RBAC Check:', {
+    loginType,
+    effectiveRole,
+    legacyRole: user.role,
+    roleId: user.roleId,
+  });
+
+  if (loginType === 'user' && effectiveRole !== 'user') {
+    console.log('❌ Role mismatch: Admin/Manager trying to use User form');
     throw new AppError(
-      'This account is an administrator account. Please use the Admin login form.',
+      'This account is an administrator or manager account. Please use the Admin login form.',
       403,
     );
   }
 
-  if (loginType === 'admin' && user.role === 'user') {
+  if (loginType === 'admin' && effectiveRole === 'user') {
     console.log('❌ Role mismatch: User trying to use Admin form');
     throw new AppError(
       'This account is a regular user account. Please use the User login form.',
@@ -50,6 +61,30 @@ export const login = async ({
   }
 
   console.log('✅ Role validation passed');
+
+  // Self-Healing: Backfill roleId if missing (Transition to RBAC)
+  if (!user.roleId) {
+    try {
+      console.log(
+        `🔧 Backfilling missing roleId for user: ${user.email} (Role: ${user.role})`,
+      );
+      const updatedRoleId = await UserRepository.syncLegacyRole(
+        user.id,
+        user.role,
+      );
+      if (updatedRoleId) {
+        user.roleId = updatedRoleId;
+        console.log('✅ Backfill successful');
+      } else {
+        console.warn(
+          `⚠️ Could not find Role record for legacy role '${user.role}'`,
+        );
+      }
+    } catch (err) {
+      console.error('❌ Failed to backfill roleId:', err.message);
+      // Don't block login for this, just log error
+    }
+  }
 
   // Create Active Session
   const session = await UserRepository.createSession({

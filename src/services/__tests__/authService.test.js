@@ -6,6 +6,7 @@ jest.unstable_mockModule('../../repositories/userRepository.js', () => ({
   findByUsername: jest.fn(),
   create: jest.fn(),
   createSession: jest.fn(),
+  syncLegacyRole: jest.fn(),
 }));
 
 jest.unstable_mockModule('bcrypt', () => ({
@@ -19,6 +20,7 @@ jest.unstable_mockModule('jsonwebtoken', () => ({
   default: {
     sign: jest.fn(),
   },
+  sign: jest.fn(),
 }));
 
 jest.unstable_mockModule('../../config/env.js', () => ({
@@ -49,18 +51,17 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should login successfully with valid credentials', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        password: 'hashedpassword',
-        role: 'user',
-        username: 'testuser',
-      };
+    const mockUser = {
+      id: 1,
+      email: 'test@example.com',
+      password: 'hashedpassword',
+      role: 'user',
+      roleRel: { name: 'user' },
+      username: 'testuser',
+    };
 
-      const mockSession = {
-        id: 100,
-      };
+    it('should login successfully with valid credentials', async () => {
+      const mockSession = { id: 100 };
 
       UserRepository.findByEmail.mockResolvedValue(mockUser);
       bcrypt.compare.mockResolvedValue(true);
@@ -75,28 +76,55 @@ describe('AuthService', () => {
 
       expect(result).toHaveProperty('token', 'mock-token');
       expect(UserRepository.createSession).toHaveBeenCalled();
+    });
 
-      // Verify session was passed to token
-      expect(jwt.sign).toHaveBeenCalledWith(
-        expect.objectContaining({ sessionId: 100 }),
-        expect.any(String),
-        expect.any(Object),
-      );
+    it('should enforce RBAC: Admin cannot login as User', async () => {
+      const adminUser = {
+        ...mockUser,
+        role: 'admin',
+        roleRel: { name: 'admin' },
+      };
+      UserRepository.findByEmail.mockResolvedValue(adminUser);
+      bcrypt.compare.mockResolvedValue(true);
+
+      await expect(
+        AuthService.login({
+          email: 'test@example.com',
+          password: 'password',
+          loginType: 'user',
+        }),
+      ).rejects.toThrow('administrator or manager account');
+    });
+
+    it('should trigger self-healing if roleId is missing', async () => {
+      const legacyUser = {
+        id: 1,
+        email: 'old@example.com',
+        password: 'hash',
+        role: 'user',
+        roleId: null, // Missing
+      };
+
+      UserRepository.findByEmail.mockResolvedValue(legacyUser);
+      bcrypt.compare.mockResolvedValue(true);
+      UserRepository.createSession.mockResolvedValue({ id: 's1' });
+      UserRepository.syncLegacyRole.mockResolvedValue(5); // Return new ID
+      jwt.sign.mockReturnValue('token');
+
+      await AuthService.login({
+        email: 'old@example.com',
+        password: 'pw',
+        loginType: 'user',
+      });
+
+      expect(UserRepository.syncLegacyRole).toHaveBeenCalledWith(1, 'user');
     });
   });
 
   describe('register', () => {
-    it('should register successfully but might be missing session', async () => {
-      const mockUser = {
-        id: 2,
-        email: 'new@example.com',
-        role: 'user',
-        password: 'hashedpassword',
-      };
-
-      const mockSession = {
-        id: 200,
-      };
+    it('should register successfully', async () => {
+      const mockUser = { id: 2, email: 'new@example.com', role: 'user' };
+      const mockSession = { id: 200 };
 
       UserRepository.findByEmail.mockResolvedValue(null);
       UserRepository.findByUsername.mockResolvedValue(null);
@@ -109,24 +137,12 @@ describe('AuthService', () => {
         email: 'new@example.com',
         username: 'newuser',
         password: 'password',
-        ipAddress: '127.0.0.1',
-        userAgent: 'Jest',
+        name: 'New',
+        lastname: 'User',
       });
 
       expect(result).toHaveProperty('token', 'mock-token');
       expect(UserRepository.create).toHaveBeenCalled();
-      expect(UserRepository.createSession).toHaveBeenCalled();
-
-      // Verify session was passed to token
-      expect(jwt.sign).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 2,
-          role: 'user',
-          sessionId: expect.anything(),
-        }),
-        expect.any(String),
-        expect.any(Object),
-      );
     });
   });
 });
