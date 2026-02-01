@@ -13,28 +13,6 @@ const initializeDB = async () => {
 
   if (!isDbConnected) {
     try {
-      // Only load .env file in local development (not in Vercel)
-      if (!process.env.VERCEL) {
-        dotenv.config();
-      }
-
-      // CRITICAL: Normalize environment variables for Prisma and pooler
-      if (process.env.VERCEL) {
-        if (!process.env.DATABASE_URL) {
-          process.env.DATABASE_URL =
-            process.env.DATABASE_URL_OVERRIDE ||
-            process.env.POSTGRES_URL_NON_POOLING ||
-            process.env.POSTGRES_PRISMA_URL ||
-            process.env.POSTGRES_URL;
-          if (process.env.DATABASE_URL) {
-            console.log('✅ DATABASE_URL normalized from fallback variables');
-          }
-        }
-        if (!process.env.DIRECT_URL) {
-          process.env.DIRECT_URL =
-            process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL;
-        }
-      }
       // Validate required environment variables
       if (!process.env.JWT_SECRET) {
         throw new Error('JWT_SECRET environment variable is not set');
