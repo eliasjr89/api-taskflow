@@ -1,3 +1,5 @@
 node_modules
 .env
 backup.sql
+prisma/*.db
+prisma/*.db-journal

@@ -1,49 +1,51 @@
 import 'dotenv/config';
-import { pool } from '../../src/db/database.js';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
 
 async function resetUsers() {
   try {
     console.log('🗑️  Limpiando base de datos...\n');
 
-    // 1. Eliminar todos los usuarios y datos referenciales
-    // 1. Eliminar todos los usuarios y datos referenciales (Ordered by dependency)
-    await pool.query('DELETE FROM role_permissions');
-    await pool.query('DELETE FROM permissions');
-    // Roles deletions might fail if users reference them, so update users first or rely on cascade if configured?
-    // Users reference Roles. So delete Users first, then Roles.
+    // 1. Eliminar todos los datos (el orden importa si no hay cascade, pero deleteMany es eficiente)
+    await prisma.rolePermission.deleteMany();
+    await prisma.permission.deleteMany();
+    await prisma.auditLog.deleteMany();
+    await prisma.activeSession.deleteMany();
+    await prisma.announcement.deleteMany();
+    await prisma.webhook.deleteMany();
+    await prisma.tasksOnTags.deleteMany();
+    await prisma.tag.deleteMany();
+    await prisma.tasksOnUsers.deleteMany();
+    await prisma.task.deleteMany();
+    await prisma.taskStatus.deleteMany();
+    await prisma.projectsOnUsers.deleteMany();
+    await prisma.project.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.role.deleteMany();
+    await prisma.systemSetting.deleteMany();
 
-    await pool.query('DELETE FROM audit_logs');
-    await pool.query('DELETE FROM active_sessions'); // New
-    await pool.query('DELETE FROM announcements'); // New
-    await pool.query('DELETE FROM webhooks'); // New
-    await pool.query('DELETE FROM tasks_tags');
-    await pool.query('DELETE FROM tags');
-    await pool.query('DELETE FROM tasks');
-    await pool.query('DELETE FROM task_statuses');
-    await pool.query('DELETE FROM projects');
-
-    // Now safe to delete users and roles
-    await pool.query('DELETE FROM users');
-    await pool.query('DELETE FROM roles');
-
-    await pool.query('DELETE FROM system_settings'); // New
     console.log('✅ Datos eliminados');
+    console.log(
+      '✅ Base de datos limpia (SQLite maneja IDs automáticamente)\n',
+    );
 
-    // 2. Resetear el contador de IDs
-    await pool.query('ALTER SEQUENCE users_id_seq RESTART WITH 1');
-    // También resetear secuencias de proyectos y tareas si existen (para consistencia en tests)
-    try {
-      await pool.query('ALTER SEQUENCE projects_id_seq RESTART WITH 1');
-      await pool.query('ALTER SEQUENCE tasks_id_seq RESTART WITH 1');
-      await pool.query('ALTER SEQUENCE tags_id_seq RESTART WITH 1');
-      await pool.query('ALTER SEQUENCE task_statuses_id_seq RESTART WITH 1');
-    } catch {
-      console.log('⚠️  Nota: No se pudieron resetear algunas secuencias');
+    // 2. Crear Roles básicos
+    console.log('🛡️  Creando roles...');
+    const roles = [
+      { name: 'admin', description: 'Super Administrator', isSystem: true },
+      { name: 'manager', description: 'Project Manager', isSystem: true },
+      { name: 'user', description: 'Standard User', isSystem: true },
+      { name: 'auditor', description: 'System Auditor', isSystem: false },
+    ];
+
+    for (const r of roles) {
+      await prisma.role.create({ data: r });
     }
-    console.log('✅ Secuencias reseteadas\n');
+    console.log('✅ Roles creados\n');
 
-    // 3. Crear los 3 usuarios de prueba
+    // 3. Crear los usuarios de prueba
     console.log('👥 Creando usuarios de prueba...\n');
 
     const users = [
@@ -84,26 +86,28 @@ async function resetUsers() {
     for (const user of users) {
       const hashedPassword = await bcrypt.hash(user.password, 10);
 
-      const result = await pool.query(
-        `INSERT INTO users (username, email, password, name, lastname, role, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) 
-         RETURNING id, username, email, name, lastname, role`,
-        [
-          user.username,
-          user.email,
-          hashedPassword,
-          user.name,
-          user.lastname,
-          user.role,
-        ],
-      );
+      const roleRecord = await prisma.role.findUnique({
+        where: { name: user.role },
+      });
+
+      const createdUser = await prisma.user.create({
+        data: {
+          username: user.username,
+          email: user.email,
+          password: hashedPassword,
+          name: user.name,
+          lastname: user.lastname,
+          role: user.role,
+          roleId: roleRecord?.id,
+        },
+      });
 
       console.log(`✅ ${user.role.toUpperCase().padEnd(8)} creado:`);
-      console.log(`   ID: ${result.rows[0].id}`);
-      console.log(`   Username: ${result.rows[0].username}`);
-      console.log(`   Email: ${result.rows[0].email}`);
+      console.log(`   ID: ${createdUser.id}`);
+      console.log(`   Username: ${createdUser.username}`);
+      console.log(`   Email: ${createdUser.email}`);
       console.log(`   Password: ${user.password}`);
-      console.log(`   Role: ${result.rows[0].role}\n`);
+      console.log(`   Role: ${createdUser.role}\n`);
     }
 
     console.log('╔════════════════════════════════════════════════╗');
@@ -127,11 +131,11 @@ async function resetUsers() {
     console.log('  Email: user2@taskflow.com');
     console.log('  Password: User123\n');
 
-    await pool.end();
+    await prisma.$disconnect();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error:', error);
-    await pool.end();
+    await prisma.$disconnect();
     process.exit(1);
   }
 }

@@ -1,6 +1,6 @@
 // src/config/env.js
-import { z } from 'zod';
-import dotenv from 'dotenv';
+import { z } from "zod";
+import dotenv from "dotenv";
 
 // Only load .env file in local development (not in Vercel)
 if (!process.env.VERCEL) {
@@ -10,21 +10,22 @@ if (!process.env.VERCEL) {
 const envSchema = z
   .object({
     NODE_ENV: z
-      .enum(['development', 'production', 'test'])
-      .default('development'),
-    PORT: z.string().default('3000'),
+      .enum(["development", "production", "test"])
+      .default("development"),
+    PORT: z.string().default("3000"),
     DB_HOST: z.string().optional(),
-    DB_PORT: z.string().default('5432'),
+    DB_PORT: z.string().default("5432"),
     DB_USER: z.string().optional(),
     DB_PASSWORD: z.string().optional(),
     DB_NAME: z.string().optional(),
     DATABASE_URL: z.string().optional(),
     POSTGRES_URL: z.string().optional(),
+    POSTGRES_URL_NON_POOLING: z.string().optional(),
     POSTGRES_PRISMA_URL: z.string().optional(),
     DATABASE_URL_OVERRIDE: z.string().optional(), // Manual override for Vercel
     PG_MAX_CLIENTS: z.string().optional(),
-    JWT_SECRET: z.string().min(10, 'JWT_SECRET must be at least 10 chars long'),
-    JWT_EXPIRES_IN: z.string().default('1h'),
+    JWT_SECRET: z.string().min(10, "JWT_SECRET must be at least 10 chars long"),
+    JWT_EXPIRES_IN: z.string().default("1h"),
   })
   .refine(
     (data) =>
@@ -32,11 +33,12 @@ const envSchema = z
       data.DATABASE_URL_OVERRIDE ||
       data.DATABASE_URL ||
       data.POSTGRES_URL ||
+      data.POSTGRES_URL_NON_POOLING ||
       data.POSTGRES_PRISMA_URL,
     {
       message:
-        'Database configuration missing. Provide either (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) or a connection string (DATABASE_URL_OVERRIDE / POSTGRES_PRISMA_URL / POSTGRES_URL / DATABASE_URL).',
-      path: ['DB_HOST'], // Error pointer
+        "Database configuration missing. Provide either (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) or a connection string (DATABASE_URL_OVERRIDE / POSTGRES_PRISMA_URL / POSTGRES_URL / POSTGRES_URL_NON_POOLING / DATABASE_URL).",
+      path: ["DB_HOST"], // Error pointer
     },
   );
 
@@ -44,7 +46,7 @@ const parseEnv = () => {
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {
-    console.error('❌ Invalid environment variables:', result.error.format());
+    console.error("❌ Invalid environment variables:", result.error.format());
     process.exit(1);
   }
 
