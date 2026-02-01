@@ -87,7 +87,7 @@ export default async (req, res) => {
     return res.status(500).json({
       success: false,
       error: 'Internal Server Error',
-      message: isDev ? error.message : 'A server error has occurred',
+      message: error.message,
       details: isDev
         ? {
           stack: error.stack,
