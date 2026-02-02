@@ -1,12 +1,12 @@
-import { prisma } from '../lib/prisma.js';
+import { prisma } from "../lib/prisma.js";
 
 // Helper to transform Project to match legacy API response
 const transformProject = (project) => ({
   id: project.id,
   name: project.name,
   description: project.description,
-  color: project.color || 'indigo',
-  icon: project.icon || 'Folder',
+  color: project.color || "indigo",
+  icon: project.icon || "Folder",
   created_at: project.createdAt,
   updated_at: project.updatedAt,
   creator_id: project.creatorId,
@@ -14,12 +14,14 @@ const transformProject = (project) => ({
   creator_name: project.creator?.name,
   creator_lastname: project.creator?.lastname,
   creator_role: project.creator?.role,
-  num_tasks: project._count?.tasks || 0,
-  num_team_members: project._count?.users || 0,
+  task_count: project._count?.tasks || 0,
+  member_count: project._count?.users || 0,
   users:
     project.users?.map((u) => ({
       id: u.user.id,
       username: u.user.username,
+      name: u.user.name,
+      lastname: u.user.lastname,
       profile_image: u.user.profileImage,
     })) || [],
 });
@@ -29,12 +31,13 @@ export const findAll = async () => {
     include: {
       creator: true,
       users: {
-        take: 5,
         include: {
           user: {
             select: {
               id: true,
               username: true,
+              name: true,
+              lastname: true,
               profileImage: true,
             },
           },
@@ -44,7 +47,7 @@ export const findAll = async () => {
         select: { tasks: true, users: true },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
   return projects.map(transformProject);
 };
@@ -77,8 +80,8 @@ export const create = async (projectData, creatorId, tx = prisma) => {
       name,
       description,
       creatorId: Number(creatorId),
-      color: color || 'indigo',
-      icon: icon || 'Folder',
+      color: color || "indigo",
+      icon: icon || "Folder",
     },
   });
   return transformProject(project);
@@ -123,7 +126,6 @@ export const addUsers = async (projectId, userIds, tx = prisma) => {
       projectId: Number(projectId),
       userId: Number(userId),
     })),
-    skipDuplicates: true,
   });
 };
 
@@ -139,7 +141,7 @@ export const removeUser = async (projectId, userId, tx = prisma) => {
     });
   } catch (error) {
     // Ignore if not found
-    if (error.code !== 'P2025') {
+    if (error.code !== "P2025") {
       throw error;
     }
   }
@@ -184,7 +186,7 @@ export const getProjectTasks = async (projectId, tx = prisma) => {
         },
       },
     },
-    orderBy: { id: 'asc' },
+    orderBy: { id: "asc" },
   });
 
   return tasks.map((t) => ({
@@ -208,4 +210,28 @@ export const checkUsersExist = async (userIds, tx = prisma) => {
     },
   });
   return count === userIds.length;
+};
+
+export const deleteEmptyProjects = async (tx = prisma) => {
+  // Find projects with zero tasks
+  const emptyProjects = await tx.project.findMany({
+    where: {
+      tasks: {
+        none: {},
+      },
+    },
+    select: { id: true },
+  });
+
+  const ids = emptyProjects.map((p) => p.id);
+
+  if (ids.length > 0) {
+    await tx.project.deleteMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+  }
+
+  return ids.length;
 };

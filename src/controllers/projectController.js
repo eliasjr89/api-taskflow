@@ -1,14 +1,14 @@
 // src/controllers/projectController.js
-import * as ProjectService from '../services/projectService.js';
-import * as AuditService from '../services/auditService.js';
-import { catchAsync } from '../utils/catchAsync.js';
+import * as ProjectService from "../services/projectService.js";
+import * as AuditService from "../services/auditService.js";
+import { catchAsync } from "../utils/catchAsync.js";
 
 export const getAllProjects = catchAsync(async (req, res) => {
   const projects = await ProjectService.getAllProjects();
   res.status(200).json({
     success: true,
     data: projects,
-    message: 'Projects fetched successfully',
+    message: "Projects fetched successfully",
   });
 });
 
@@ -17,7 +17,7 @@ export const getProjectById = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     data: project,
-    message: 'Project fetched successfully',
+    message: "Project fetched successfully",
   });
 });
 
@@ -25,8 +25,8 @@ export const createProject = catchAsync(async (req, res) => {
   const project = await ProjectService.createProject(req.body, req.user.userId);
   await AuditService.logAction({
     userId: req.user.userId,
-    action: 'CREATE_PROJECT',
-    entityType: 'PROJECT',
+    action: "CREATE_PROJECT",
+    entityType: "PROJECT",
     entityId: project.id,
     details: { name: project.name },
     req,
@@ -34,7 +34,7 @@ export const createProject = catchAsync(async (req, res) => {
   res.status(201).json({
     success: true,
     data: project,
-    message: 'Project created successfully',
+    message: "Project created successfully",
   });
 });
 
@@ -46,8 +46,8 @@ export const updateProject = catchAsync(async (req, res) => {
   );
   await AuditService.logAction({
     userId: req.user.userId,
-    action: 'UPDATE_PROJECT',
-    entityType: 'PROJECT',
+    action: "UPDATE_PROJECT",
+    entityType: "PROJECT",
     entityId: project.id,
     details: req.body,
     req,
@@ -55,7 +55,7 @@ export const updateProject = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     data: project,
-    message: 'Project updated successfully',
+    message: "Project updated successfully",
   });
 });
 
@@ -63,8 +63,8 @@ export const deleteProject = catchAsync(async (req, res) => {
   await ProjectService.deleteProject(req.params.id, req.user);
   await AuditService.logAction({
     userId: req.user.userId,
-    action: 'DELETE_PROJECT',
-    entityType: 'PROJECT',
+    action: "DELETE_PROJECT",
+    entityType: "PROJECT",
     entityId: req.params.id,
     details: {},
     req,
@@ -72,7 +72,7 @@ export const deleteProject = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     data: null,
-    message: 'Project deleted successfully',
+    message: "Project deleted successfully",
   });
 });
 
@@ -82,7 +82,7 @@ export const getProjectUsers = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     data: users,
-    message: 'Project users fetched successfully',
+    message: "Project users fetched successfully",
   });
 });
 
@@ -91,8 +91,8 @@ export const addUsersToProject = catchAsync(async (req, res) => {
 
   await AuditService.logAction({
     userId: req.user.userId,
-    action: 'ADD_PROJECT_MEMBERS',
-    entityType: 'PROJECT',
+    action: "ADD_PROJECT_MEMBERS",
+    entityType: "PROJECT",
     entityId: req.params.id,
     details: { added_users: req.body.user_ids },
     req,
@@ -100,7 +100,7 @@ export const addUsersToProject = catchAsync(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: 'Users added to project',
+    message: "Users added to project",
   });
 });
 
@@ -108,7 +108,7 @@ export const removeUserFromProject = catchAsync(async (req, res) => {
   await ProjectService.removeUserFromProject(req.params.id, req.params.userId);
   res.status(200).json({
     success: true,
-    message: 'User removed from project',
+    message: "User removed from project",
   });
 });
 
@@ -118,6 +118,24 @@ export const getProjectTasks = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     data: tasks,
-    message: 'Project tasks fetched successfully',
+    message: "Project tasks fetched successfully",
+  });
+});
+export const deleteEmptyProjects = catchAsync(async (req, res) => {
+  const count = await ProjectService.deleteEmptyProjects();
+
+  await AuditService.logAction({
+    userId: req.user.userId,
+    action: "CLEAN_EMPTY_PROJECTS",
+    entityType: "PROJECT",
+    entityId: 0,
+    details: { deleted_count: count },
+    req,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `${count} empty projects deleted successfully`,
+    data: { deleted_count: count },
   });
 });

@@ -1,5 +1,5 @@
 // src/routes/projects.routes.js
-import { Router } from 'express';
+import { Router } from "express";
 import {
   getAllProjects,
   getProjectById,
@@ -10,19 +10,20 @@ import {
   getProjectTasks,
   addUsersToProject,
   removeUserFromProject,
-} from '../controllers/projectController.js';
-import { authMiddleware } from '../middleware/auth.middleware.js';
+  deleteEmptyProjects,
+} from "../controllers/projectController.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 import {
   validateBody,
   validateParams,
-} from '../middleware/validate.middleware.js';
+} from "../middleware/validate.middleware.js";
 import {
   createProjectSchema,
   updateProjectSchema,
   getProjectSchema,
   addUsersToProjectSchema,
   removeUserFromProjectSchema,
-} from '../schemas/project.schema.js';
+} from "../schemas/project.schema.js";
 
 const router = Router();
 
@@ -45,7 +46,19 @@ router.use(authMiddleware);
  *       200:
  *         description: Lista de proyectos
  */
-router.get('/', getAllProjects);
+router.get("/", getAllProjects);
+
+/**
+ * @swagger
+ * /projects/clean-empty:
+ *   post:
+ *     summary: Eliminar proyectos sin tareas
+ *     tags: [Projects]
+ *     responses:
+ *       200:
+ *         description: Proyectos eliminados exitosamente
+ */
+router.post("/clean-empty", deleteEmptyProjects);
 
 /**
  * @swagger
@@ -65,7 +78,7 @@ router.get('/', getAllProjects);
  *       404:
  *         description: Proyecto no encontrado
  */
-router.get('/:id', validateParams(getProjectSchema), getProjectById);
+router.get("/:id", validateParams(getProjectSchema), getProjectById);
 
 /**
  * @swagger
@@ -100,7 +113,7 @@ router.get('/:id', validateParams(getProjectSchema), getProjectById);
  *       201:
  *         description: Proyecto creado
  */
-router.post('/', validateBody(createProjectSchema), createProject);
+router.post("/", validateBody(createProjectSchema), createProject);
 
 /**
  * @swagger
@@ -128,7 +141,7 @@ router.post('/', validateBody(createProjectSchema), createProject);
  *       200:
  *         description: Proyecto actualizado
  */
-router.put('/:id', validateParams(updateProjectSchema), updateProject);
+router.put("/:id", validateParams(updateProjectSchema), updateProject);
 
 /**
  * @swagger
@@ -146,17 +159,17 @@ router.put('/:id', validateParams(updateProjectSchema), updateProject);
  *       200:
  *         description: Proyecto eliminado
  */
-router.delete('/:id', validateParams(getProjectSchema), deleteProject);
+router.delete("/:id", validateParams(getProjectSchema), deleteProject);
 
 // Project Members
-router.get('/:id/users', validateParams(getProjectSchema), getProjectUsers);
+router.get("/:id/users", validateParams(getProjectSchema), getProjectUsers);
 router.post(
-  '/:id/users',
+  "/:id/users",
   validateBody(addUsersToProjectSchema),
   addUsersToProject,
 );
 router.delete(
-  '/:id/users/:userId',
+  "/:id/users/:userId",
   validateParams(removeUserFromProjectSchema),
   removeUserFromProject,
 );
@@ -180,6 +193,6 @@ router.delete(
  *       404:
  *         description: Proyecto no encontrado
  */
-router.get('/:id/tasks', validateParams(getProjectSchema), getProjectTasks);
+router.get("/:id/tasks", validateParams(getProjectSchema), getProjectTasks);
 
 export default router;

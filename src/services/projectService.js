@@ -1,7 +1,7 @@
 // src/services/projectService.js
-import { prisma } from '../lib/prisma.js';
-import * as ProjectRepository from '../repositories/projectRepository.js';
-import { AppError } from '../utils/AppError.js';
+import { prisma } from "../lib/prisma.js";
+import * as ProjectRepository from "../repositories/projectRepository.js";
+import { AppError } from "../utils/AppError.js";
 
 export const getAllProjects = async () => {
   return await ProjectRepository.findAll();
@@ -10,7 +10,7 @@ export const getAllProjects = async () => {
 export const getProjectById = async (id) => {
   const project = await ProjectRepository.findById(id);
   if (!project) {
-    throw new AppError('Project not found', 404);
+    throw new AppError("Project not found", 404);
   }
   // No need to fetch manually if repo already transformed, but Repo 'findById' uses 'transformProject' via Prisma include
   // But wait, 'findById' in repo now returns the object. Does it include 'users' field?
@@ -37,7 +37,7 @@ export const createProject = async (data, creatorId) => {
         data.user_ids &&
         !(await ProjectRepository.checkUsersExist(data.user_ids, tx))
       ) {
-        throw new AppError('One or more user_ids do not exist', 400);
+        throw new AppError("One or more user_ids do not exist", 400);
       }
 
       const project = await ProjectRepository.create(data, creatorId, tx);
@@ -61,14 +61,14 @@ export const updateProject = async (id, data, user) => {
     async (tx) => {
       const existingProject = await ProjectRepository.findById(id, tx);
       if (!existingProject) {
-        throw new AppError('Project not found', 404);
+        throw new AppError("Project not found", 404);
       }
 
       const userId = user.id || user.userId;
       const isAdmin =
-        user.role === 'admin' ||
-        (user.permissions && user.permissions.includes('manage:all'));
-      const isManager = user.role === 'manager';
+        user.role === "admin" ||
+        (user.permissions && user.permissions.includes("manage:all"));
+      const isManager = user.role === "manager";
 
       // Check membership
       const membership = await tx.projectsOnUsers.findUnique({
@@ -89,7 +89,7 @@ export const updateProject = async (id, data, user) => {
         !membership
       ) {
         throw new AppError(
-          'You do not have permission to update this project',
+          "You do not have permission to update this project",
           403,
         );
       }
@@ -98,7 +98,7 @@ export const updateProject = async (id, data, user) => {
 
       if (data.user_ids) {
         if (!(await ProjectRepository.checkUsersExist(data.user_ids, tx))) {
-          throw new AppError('One or more user_ids do not exist', 400);
+          throw new AppError("One or more user_ids do not exist", 400);
         }
 
         // Replace users strategy
@@ -123,17 +123,17 @@ export const deleteProject = async (id, user) => {
       // Clean relations
       const existingProject = await ProjectRepository.findById(id, tx);
       if (!existingProject) {
-        throw new AppError('Project not found', 404);
+        throw new AppError("Project not found", 404);
       }
 
       const userId = user.id || user.userId;
       const isAdmin =
-        user.role === 'admin' ||
-        (user.permissions && user.permissions.includes('manage:all'));
+        user.role === "admin" ||
+        (user.permissions && user.permissions.includes("manage:all"));
 
       if (userId && existingProject.creator_id !== userId && !isAdmin) {
         throw new AppError(
-          'You do not have permission to delete this project',
+          "You do not have permission to delete this project",
           403,
         );
       }
@@ -144,7 +144,7 @@ export const deleteProject = async (id, user) => {
 
       const deleted = await ProjectRepository.deleteById(id, tx);
       if (!deleted) {
-        throw new AppError('Project not found', 404);
+        throw new AppError("Project not found", 404);
       }
       return deleted;
     },
@@ -158,12 +158,12 @@ export const addUsersToProject = async (id, userIds) => {
   // Basic existence checks - no transaction strictly needed if just adding
   const project = await ProjectRepository.findById(id);
   if (!project) {
-    throw new AppError('Project not found', 404);
+    throw new AppError("Project not found", 404);
   }
 
   if (userIds.length > 0) {
     if (!(await ProjectRepository.checkUsersExist(userIds))) {
-      throw new AppError('One or more users not found', 400);
+      throw new AppError("One or more users not found", 400);
     }
     await ProjectRepository.addUsers(id, userIds);
   }
@@ -172,7 +172,7 @@ export const addUsersToProject = async (id, userIds) => {
 export const removeUserFromProject = async (id, userId) => {
   const project = await ProjectRepository.findById(id);
   if (!project) {
-    throw new AppError('Project not found', 404);
+    throw new AppError("Project not found", 404);
   }
 
   await ProjectRepository.removeUser(id, userId);
@@ -181,7 +181,7 @@ export const removeUserFromProject = async (id, userId) => {
 export const getProjectUsers = async (id) => {
   const project = await ProjectRepository.findById(id);
   if (!project) {
-    throw new AppError('Project not found', 404);
+    throw new AppError("Project not found", 404);
   }
   return await ProjectRepository.getProjectUsers(id);
 };
@@ -189,7 +189,10 @@ export const getProjectUsers = async (id) => {
 export const getProjectTasks = async (id) => {
   const project = await ProjectRepository.findById(id);
   if (!project) {
-    throw new AppError('Project not found', 404);
+    throw new AppError("Project not found", 404);
   }
   return await ProjectRepository.getProjectTasks(id);
+};
+export const deleteEmptyProjects = async () => {
+  return await ProjectRepository.deleteEmptyProjects();
 };
