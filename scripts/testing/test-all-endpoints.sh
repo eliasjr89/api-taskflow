@@ -76,7 +76,11 @@ echo "2️⃣  USUARIOS"
 echo "═══════════════════════════════════════════════"
 
 test_endpoint "GET" "/users" "" "$ADMIN_TOKEN" "Obtener todos los usuarios (admin)"
-test_endpoint "GET" "/users/1" "" "$ADMIN_TOKEN" "Obtener usuario por ID (admin)"
+# Extraer ID de usuario dinámicamente
+DYNAMIC_USER_ID=$(echo $response | jq -r '.data[0].id')
+echo "ℹ️  Usando User ID dinámico: $DYNAMIC_USER_ID"
+
+test_endpoint "GET" "/users/$DYNAMIC_USER_ID" "" "$ADMIN_TOKEN" "Obtener usuario por ID (admin)"
 test_endpoint "GET" "/user/profile" "" "$USER_TOKEN" "Obtener perfil propio (user)"
 
 echo ""
@@ -85,9 +89,13 @@ echo "3️⃣  PROYECTOS"
 echo "═══════════════════════════════════════════════"
 
 test_endpoint "GET" "/projects" "" "$ADMIN_TOKEN" "Obtener todos los proyectos (admin)"
-test_endpoint "GET" "/projects/1" "" "$ADMIN_TOKEN" "Obtener proyecto por ID (admin)"
-test_endpoint "GET" "/projects/1/users" "" "$ADMIN_TOKEN" "Obtener usuarios del proyecto (admin)"
-test_endpoint "GET" "/projects/1/tasks" "" "$ADMIN_TOKEN" "Obtener tareas del proyecto (admin)"
+# Extraer ID de proyecto dinámicamente
+PROJECT_ID=$(echo $response | jq -r '.data[0].id')
+echo "ℹ️  Usando Project ID dinámico: $PROJECT_ID"
+
+test_endpoint "GET" "/projects/$PROJECT_ID" "" "$ADMIN_TOKEN" "Obtener proyecto por ID (admin)"
+test_endpoint "GET" "/projects/$PROJECT_ID/users" "" "$ADMIN_TOKEN" "Obtener usuarios del proyecto (admin)"
+test_endpoint "GET" "/projects/$PROJECT_ID/tasks" "" "$ADMIN_TOKEN" "Obtener tareas del proyecto (admin)"
 test_endpoint "GET" "/user/projects" "" "$USER_TOKEN" "Obtener proyectos del usuario (user)"
 
 echo ""
