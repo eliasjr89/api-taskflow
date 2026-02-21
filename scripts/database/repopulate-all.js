@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🧹 Limpiando base de datos para repoblación limpia...");
+  console.log('🧹 Limpiando base de datos para repoblación limpia...');
 
   // Limpiar relaciones y tablas dependientes primero
   await prisma.auditLog.deleteMany();
@@ -15,40 +15,40 @@ async function main() {
   await prisma.user.deleteMany();
 
   const salt = await bcrypt.genSalt(10);
-  const password = await bcrypt.hash("Admin123", salt);
+  const password = await bcrypt.hash('Admin123', salt);
 
   const roleConfigs = [
     {
-      role: "admin",
-      email: "admin@taskflow.com",
-      name: "Admin",
-      lastname: "Total",
+      role: 'admin',
+      email: 'admin@taskflow.com',
+      name: 'Admin',
+      lastname: 'Total',
       countRange: [5, 10],
     },
     {
-      role: "manager",
-      email: "manager@taskflow.com",
-      name: "Manager",
-      lastname: "General",
+      role: 'manager',
+      email: 'manager@taskflow.com',
+      name: 'Manager',
+      lastname: 'General',
       countRange: [8, 15],
     },
     {
-      role: "user",
-      email: "user@taskflow.com",
-      name: "User",
-      lastname: "Standard",
+      role: 'user',
+      email: 'user@taskflow.com',
+      name: 'User',
+      lastname: 'Standard',
       countRange: [3, 7],
     },
     {
-      role: "auditor",
-      email: "auditor@taskflow.com",
-      name: "Auditor",
-      lastname: "System",
+      role: 'auditor',
+      email: 'auditor@taskflow.com',
+      name: 'Auditor',
+      lastname: 'System',
       countRange: [2, 5],
     },
   ];
 
-  console.log("👥 Creando un usuario por cada rol...");
+  console.log('👥 Creando un usuario por cada rol...');
 
   const createdUsers = [];
   for (const cfg of roleConfigs) {
@@ -65,18 +65,18 @@ async function main() {
     createdUsers.push({ ...user, range: cfg.countRange });
   }
 
-  console.log("🏗️ Creando proyectos y tareas aleatorias...");
+  console.log('🏗️ Creando proyectos y tareas aleatorias...');
 
   const projectsBase = [
-    "Sistema de Seguridad",
-    "Rediseño Modular",
-    "Optimización SQL",
-    "App Mobile v3",
-    "Integración ERP",
-    "Dashboard Ejecutivo",
-    "Auditoría Anual",
-    "Campaña Primavera",
-    "Backup Global",
+    'Sistema de Seguridad',
+    'Rediseño Modular',
+    'Optimización SQL',
+    'App Mobile v3',
+    'Integración ERP',
+    'Dashboard Ejecutivo',
+    'Auditoría Anual',
+    'Campaña Primavera',
+    'Backup Global',
   ];
 
   const createdProjects = [];
@@ -118,7 +118,7 @@ async function main() {
           description: `Tarea ${i} de ${user.username}: ${proj.name}`,
           projectId: proj.id,
           statusId: Math.floor(Math.random() * 4) + 1,
-          priority: ["low", "medium", "high", "urgent"][
+          priority: ['low', 'medium', 'high', 'urgent'][
             Math.floor(Math.random() * 4)
           ],
           users: {
@@ -129,7 +129,7 @@ async function main() {
     }
   }
 
-  console.log("✅ Repoblación finalizada con éxito.");
+  console.log('✅ Repoblación finalizada con éxito.');
 }
 
 main()

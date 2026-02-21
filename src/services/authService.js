@@ -1,9 +1,9 @@
 // src/services/authService.js
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import * as UserRepository from "../repositories/userRepository.js";
-import { AppError } from "../utils/AppError.js";
-import { env } from "../config/env.js";
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import * as UserRepository from '../repositories/userRepository.js';
+import { AppError } from '../utils/AppError.js';
+import { env } from '../config/env.js';
 
 const signToken = (id, role, sessionId) => {
   return jwt.sign({ userId: id, role, sessionId }, env.JWT_SECRET, {
@@ -21,46 +21,46 @@ export const login = async ({
   const user = await UserRepository.findByEmail(email);
 
   if (!user) {
-    throw new AppError("Invalid credentials", 401);
+    throw new AppError('Invalid credentials', 401);
   }
 
   const validPassword = await bcrypt.compare(password, user.password);
 
   if (!validPassword) {
-    throw new AppError("Invalid credentials", 401);
+    throw new AppError('Invalid credentials', 401);
   }
 
   // Determine effective role (Role Relation takes precedence over legacy string)
   const effectiveRole = (
     user.roleRel?.name ||
     user.role ||
-    "user"
+    'user'
   ).toLowerCase();
 
-  console.log("🔍 RBAC Check:", {
+  console.log('🔍 RBAC Check:', {
     loginType,
     effectiveRole,
     legacyRole: user.role,
     roleId: user.roleId,
   });
 
-  if (loginType === "user" && effectiveRole !== "user") {
-    console.log("❌ Role mismatch: Admin/Manager trying to use User form");
+  if (loginType === 'user' && effectiveRole !== 'user') {
+    console.log('❌ Role mismatch: Admin/Manager trying to use User form');
     throw new AppError(
-      "This account is an administrator or manager account. Please use the Admin login form.",
+      'This account is an administrator or manager account. Please use the Admin login form.',
       403,
     );
   }
 
-  if (loginType === "admin" && effectiveRole === "user") {
-    console.log("❌ Role mismatch: User trying to use Admin form");
+  if (loginType === 'admin' && effectiveRole === 'user') {
+    console.log('❌ Role mismatch: User trying to use Admin form');
     throw new AppError(
-      "This account is a regular user account. Please use the User login form.",
+      'This account is a regular user account. Please use the User login form.',
       403,
     );
   }
 
-  console.log("✅ Role validation passed");
+  console.log('✅ Role validation passed');
 
   // Self-Healing: Backfill roleId if missing (Transition to RBAC)
   if (!user.roleId) {
@@ -74,14 +74,14 @@ export const login = async ({
       );
       if (updatedRoleId) {
         user.roleId = updatedRoleId;
-        console.log("✅ Backfill successful");
+        console.log('✅ Backfill successful');
       } else {
         console.warn(
           `⚠️ Could not find Role record for legacy role '${user.role}'`,
         );
       }
     } catch (err) {
-      console.error("❌ Failed to backfill roleId:", err.message);
+      console.error('❌ Failed to backfill roleId:', err.message);
       // Don't block login for this, just log error
     }
   }
@@ -129,7 +129,7 @@ export const impersonate = async (adminUserId, targetUserId) => {
   // Verify admin has permission? Middleware does most, but logic here too.
   const targetUser = await UserRepository.findById(targetUserId);
   if (!targetUser) {
-    throw new AppError("User not found", 404);
+    throw new AppError('User not found', 404);
   }
 
   // Mark session as impersonated?
@@ -137,7 +137,7 @@ export const impersonate = async (adminUserId, targetUserId) => {
   const session = await UserRepository.createSession({
     userId: targetUser.id,
     userAgent: `Impersonated by Admin ${adminUserId}`,
-    ipAddress: "Internal",
+    ipAddress: 'Internal',
   });
 
   const token = signToken(targetUser.id, targetUser.role, session.id);
@@ -153,12 +153,12 @@ export const register = async (userData) => {
 
   const existingUser = await UserRepository.findByEmail(rest.email);
   if (existingUser) {
-    throw new AppError("Email already in use", 400);
+    throw new AppError('Email already in use', 400);
   }
 
   const existingUsername = await UserRepository.findByUsername(rest.username);
   if (existingUsername) {
-    throw new AppError("Username already in use", 400);
+    throw new AppError('Username already in use', 400);
   }
 
   const hashedPassword = await bcrypt.hash(rest.password, 12);

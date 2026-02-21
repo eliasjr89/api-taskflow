@@ -1,18 +1,18 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Iniciando seed local con Prisma...");
+  console.log('🌱 Iniciando seed local con Prisma...');
 
   const adminId = 1;
 
   // 1. Crear Estados
   const statuses = [
-    { id: 1, name: "pending" },
-    { id: 2, name: "in_progress" },
-    { id: 3, name: "review" },
-    { id: 4, name: "completed" },
+    { id: 1, name: 'pending' },
+    { id: 2, name: 'in_progress' },
+    { id: 3, name: 'review' },
+    { id: 4, name: 'completed' },
   ];
 
   for (const s of statuses) {
@@ -26,18 +26,18 @@ async function main() {
   // 2. Crear Proyectos asignados al Admin
   const projects = [
     {
-      name: "Rediseño Web",
-      description: "Nueva interfaz 2024",
+      name: 'Rediseño Web',
+      description: 'Nueva interfaz 2024',
       creatorId: adminId,
     },
     {
-      name: "App Móvil v2",
-      description: "Migración a React Native",
+      name: 'App Móvil v2',
+      description: 'Migración a React Native',
       creatorId: adminId,
     },
     {
-      name: "Integración API",
-      description: "Conexión con CRM externo",
+      name: 'Integración API',
+      description: 'Conexión con CRM externo',
       creatorId: adminId,
     },
   ];
@@ -58,7 +58,7 @@ async function main() {
         description: `Tarea inicial para ${createdProject.name}`,
         projectId: createdProject.id,
         statusId: 1,
-        priority: "medium",
+        priority: 'medium',
         users: {
           create: { userId: adminId },
         },
@@ -67,7 +67,7 @@ async function main() {
   }
 
   console.log(
-    "✅ Seed completado: Proyectos y tareas asignados al Admin (ID: 1)",
+    '✅ Seed completado: Proyectos y tareas asignados al Admin (ID: 1)',
   );
 }
 

@@ -71,3 +71,24 @@ export const register = catchAsync(async (req, res) => {
     data: { token, user },
   });
 });
+
+export const logout = catchAsync(async (req, res) => {
+  // Extract session ID from decoded token (auth middleware attaches user/session)
+  const sessionId = req.user?.sessionId;
+
+  if (sessionId) {
+    await AuthService.logout(sessionId);
+  }
+
+  // Clear HTTP Only Cookie
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Logged out successfully',
+  });
+});

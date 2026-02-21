@@ -1,7 +1,8 @@
 // src/routes/auth.routes.js
 
 import { Router } from 'express';
-import { login, register } from '../auth/auth.controller.js';
+import { login, register, logout } from '../auth/auth.controller.js';
+import { auth } from '../middleware/auth.middleware.js';
 import { validateBody } from '../middleware/validate.middleware.js';
 import {
   loginSchema,
@@ -87,5 +88,17 @@ router.post('/login', validateBody(loginSchema), login);
  *         description: Usuario creado exitosamente
  */
 router.post('/register', validateBody(createUserSchema), register);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Cerrar sesión
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Logout exitoso
+ */
+router.post('/logout', auth, logout);
 
 export default router;

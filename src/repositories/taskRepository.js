@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma.js";
+import { prisma } from '../lib/prisma.js';
 
 // Helper to match legacy response format
 const transformTask = (task) => ({
@@ -74,7 +74,7 @@ export const findAll = async ({
         },
       },
     },
-    orderBy: { id: "asc" },
+    orderBy: { id: 'asc' },
     skip: offset ? Number(offset) : undefined,
     take: limit ? Number(limit) : undefined,
   });
@@ -137,7 +137,7 @@ export const create = async (taskData, tx = prisma) => {
       description,
       projectId: Number(project_id),
       statusId: Number(status_id),
-      priority: priority || "low",
+      priority: priority || 'low',
       completed: completed || false,
       dueDate: due_date || null,
     },
@@ -205,7 +205,7 @@ export const removeUser = async (taskId, userId, tx = prisma) => {
       },
     });
   } catch (error) {
-    if (error.code !== "P2025") {
+    if (error.code !== 'P2025') {
       throw error;
     }
   }
@@ -237,7 +237,7 @@ export const removeTag = async (taskId, tagId, tx = prisma) => {
       },
     });
   } catch (error) {
-    if (error.code !== "P2025") {
+    if (error.code !== 'P2025') {
       throw error;
     }
   }

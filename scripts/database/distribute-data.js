@@ -1,34 +1,34 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🚀 Iniciando distribución de carga de trabajo...");
+  console.log('🚀 Iniciando distribución de carga de trabajo...');
 
   const users = await prisma.user.findMany();
-  const admin = users.find((u) => u.role === "admin") || users[0];
-  const manager = users.find((u) => u.role === "manager") || users[1];
+  const admin = users.find((u) => u.role === 'admin') || users[0];
+  const manager = users.find((u) => u.role === 'manager') || users[1];
 
   // 1. Crear Proyectos Variados
   const projectData = [
     {
-      name: "Infraestructura Cloud",
-      description: "Migración a AWS",
+      name: 'Infraestructura Cloud',
+      description: 'Migración a AWS',
       creatorId: admin.id,
     },
     {
-      name: "Campaña Marketing",
-      description: "Lanzamiento Q3",
+      name: 'Campaña Marketing',
+      description: 'Lanzamiento Q3',
       creatorId: manager.id,
     },
     {
-      name: "Seguridad Operativa",
-      description: "Auditoría de accesos",
+      name: 'Seguridad Operativa',
+      description: 'Auditoría de accesos',
       creatorId: admin.id,
     },
     {
-      name: "Portal de Clientes",
-      description: "Nueva área privada",
+      name: 'Portal de Clientes',
+      description: 'Nueva área privada',
       creatorId: manager.id,
     },
   ];
@@ -60,7 +60,7 @@ async function main() {
           description: `Tarea ${i} de alta prioridad para ${user.username}`,
           projectId: userProjects[i % 2].id,
           statusId: (i % 4) + 1,
-          priority: i % 2 === 0 ? "high" : "medium",
+          priority: i % 2 === 0 ? 'high' : 'medium',
           users: {
             create: { userId: user.id },
           },
@@ -70,7 +70,7 @@ async function main() {
   }
 
   console.log(
-    "✅ Distribución terminada. Cada usuario tiene al menos 5 tareas y 2 proyectos.",
+    '✅ Distribución terminada. Cada usuario tiene al menos 5 tareas y 2 proyectos.',
   );
 }
 

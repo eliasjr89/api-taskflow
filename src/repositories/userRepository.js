@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma.js";
+import { prisma } from '../lib/prisma.js';
 
 // Helper to transform Project to match legacy API response
 const transformProject = (project) => ({
@@ -31,7 +31,7 @@ const transformTask = (task) => ({
 
 export const findAll = async () => {
   const usersWithCounts = await prisma.user.findMany({
-    orderBy: { id: "asc" },
+    orderBy: { id: 'asc' },
     select: {
       id: true,
       username: true,
@@ -183,7 +183,7 @@ const findRoleByName = async (name) => {
 
 export const create = async (userData) => {
   // Try to find the corresponding role record
-  const roleName = userData.role || "user";
+  const roleName = userData.role || 'user';
   const roleRecord = await findRoleByName(roleName);
 
   const newUser = await prisma.user.create({
@@ -320,7 +320,7 @@ export const findProjectsByUserId = async (userId) => {
       creator: { select: { username: true } },
       _count: { select: { tasks: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: 'desc' },
   });
 
   return (projects || []).map(transformProject);
@@ -337,7 +337,7 @@ export const findTasksByUserId = async (userId) => {
       project: true,
       tags: { include: { tag: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: 'desc' },
   });
 
   return (tasks || []).map(transformTask);
@@ -386,7 +386,7 @@ export const createSession = async (data) => {
   return await prisma.activeSession.create({
     data: {
       userId: Number(data.userId),
-      tokenHash: data.tokenHash || "placeholder-" + Date.now(),
+      tokenHash: data.tokenHash || 'placeholder-' + Date.now(),
       ipAddress: data.ipAddress,
       userAgent: data.userAgent,
     },
