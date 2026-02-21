@@ -1,5 +1,5 @@
-import app from '../src/app.js';
-import { connectDB } from '../src/db/database.js';
+import app from "../src/app.js";
+import { testConnection } from "../src/db/database.js";
 
 // Initialize database connection for serverless environment
 let isDbConnected = false;
@@ -14,7 +14,7 @@ const initializeDB = async () => {
     try {
       // Validate required environment variables
       if (!process.env.JWT_SECRET) {
-        throw new Error('JWT_SECRET environment variable is not set');
+        throw new Error("JWT_SECRET environment variable is not set");
       }
 
       if (
@@ -25,15 +25,15 @@ const initializeDB = async () => {
         !process.env.DATABASE_URL
       ) {
         throw new Error(
-          'Database connection string not found in environment variables',
+          "Database connection string not found in environment variables",
         );
       }
 
-      await connectDB();
+      await testConnection();
       isDbConnected = true;
-      console.log('✅ Database initialized for serverless function');
+      console.log("✅ Database initialized for serverless function");
     } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
+      console.error("❌ Failed to initialize database:", error);
       initError = error;
       throw error;
     }
@@ -49,28 +49,28 @@ export default async (req, res) => {
     // Pass request to Express app
     return app(req, res);
   } catch (error) {
-    console.error('Serverless function error:', error);
+    console.error("Serverless function error:", error);
 
     // Return detailed error in development, generic in production
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDev = process.env.NODE_ENV === "development";
 
     return res.status(500).json({
       success: false,
-      error: 'Internal Server Error',
-      message: 'Something went very wrong!',
+      error: "Internal Server Error",
+      message: "Something went very wrong!",
       details: isDev
         ? {
-          stack: error.stack,
-          env: {
-            hasJwtSecret: !!process.env.JWT_SECRET,
-            hasDbUrl: !!(
-              process.env.POSTGRES_PRISMA_URL ||
+            stack: error.stack,
+            env: {
+              hasJwtSecret: !!process.env.JWT_SECRET,
+              hasDbUrl: !!(
+                process.env.POSTGRES_PRISMA_URL ||
                 process.env.POSTGRES_URL ||
                 process.env.DATABASE_URL
-            ),
-            nodeEnv: process.env.NODE_ENV,
-          },
-        }
+              ),
+              nodeEnv: process.env.NODE_ENV,
+            },
+          }
         : undefined,
     });
   }
