@@ -1,13 +1,13 @@
 // src/routes/auth.routes.js
 
-import { Router } from 'express';
-import { login, register, logout } from '../auth/auth.controller.js';
-import { auth } from '../middleware/auth.middleware.js';
-import { validateBody } from '../middleware/validate.middleware.js';
+import { Router } from "express";
+import { login, register, logout } from "../auth/auth.controller.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
+import { validateBody } from "../middleware/validate.middleware.js";
 import {
   loginSchema,
   registerSchema as createUserSchema,
-} from '../schemas/auth.schema.js';
+} from "../schemas/auth.schema.js";
 
 const router = Router();
 
@@ -53,7 +53,7 @@ const router = Router();
  *       401:
  *         description: Credenciales inválidas
  */
-router.post('/login', validateBody(loginSchema), login);
+router.post("/login", validateBody(loginSchema), login);
 
 /**
  * @swagger
@@ -87,7 +87,7 @@ router.post('/login', validateBody(loginSchema), login);
  *       201:
  *         description: Usuario creado exitosamente
  */
-router.post('/register', validateBody(createUserSchema), register);
+router.post("/register", validateBody(createUserSchema), register);
 
 /**
  * @swagger
@@ -99,6 +99,6 @@ router.post('/register', validateBody(createUserSchema), register);
  *       200:
  *         description: Logout exitoso
  */
-router.post('/logout', auth, logout);
+router.post("/logout", authMiddleware, logout);
 
 export default router;
