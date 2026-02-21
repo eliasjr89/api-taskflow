@@ -46,14 +46,26 @@ export const login = async ({
     roleId: user.roleId,
   });
 
+  // Separación estricta: la card de usuario solo acepta rol 'user'
   if (loginType === 'user' && effectiveRole !== 'user') {
-    logger.warn('❌ Role mismatch: Admin/Manager trying to use User form');
-    throw new AppError('Admin/Manager cannot use the user login form', 403);
+    logger.warn('❌ Role mismatch: Non-user role trying to use User form', {
+      effectiveRole,
+    });
+    throw new AppError(
+      'Only standard users can access the user login form',
+      403,
+    );
   }
 
-  if (loginType === 'admin' && effectiveRole === 'user') {
-    logger.warn('❌ Role mismatch: User trying to use Admin form');
-    throw new AppError('Standard users cannot use the admin login form', 403);
+  // Separación estricta: la card de admin solo acepta rol 'admin'
+  if (loginType === 'admin' && effectiveRole !== 'admin') {
+    logger.warn('❌ Role mismatch: Non-admin role trying to use Admin form', {
+      effectiveRole,
+    });
+    throw new AppError(
+      'Only administrators can access the admin login form',
+      403,
+    );
   }
 
   logger.debug('✅ Role validation passed');

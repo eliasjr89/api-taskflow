@@ -90,6 +90,13 @@ async function resetUsers() {
         where: { name: user.role },
       });
 
+      // Validación explícita: si no se encuentra el rol, lanzar error en lugar de asignar null
+      if (!roleRecord) {
+        throw new Error(
+          `❌ No se encontró el rol '${user.role}' en la tabla roles. Verifica la configuración RBAC.`,
+        );
+      }
+
       const createdUser = await prisma.user.create({
         data: {
           username: user.username,
@@ -98,7 +105,7 @@ async function resetUsers() {
           name: user.name,
           lastname: user.lastname,
           role: user.role,
-          roleId: roleRecord?.id,
+          roleId: roleRecord.id, // Usar directamente, ya validado arriba
         },
       });
 
@@ -107,8 +114,38 @@ async function resetUsers() {
       console.log(`   Username: ${createdUser.username}`);
       console.log(`   Email: ${createdUser.email}`);
       console.log(`   Password: ${user.password}`);
-      console.log(`   Role: ${createdUser.role}\n`);
+      console.log(
+        `   Role: ${createdUser.role} (roleId: ${createdUser.roleId})\n`,
+      );
     }
+
+    // 4. Verificación de integridad: confirmar que TODOS los usuarios tienen el roleId correcto
+    console.log('🔍 Verificando integridad de roles...');
+    const usersWithRoles = await prisma.user.findMany({
+      include: { roleRel: { select: { name: true } } },
+    });
+
+    let integrityPassed = true;
+    for (const u of usersWithRoles) {
+      const expectedMatchesActual = u.roleRel?.name === u.role;
+      if (!expectedMatchesActual) {
+        console.error(
+          `   ❌ MISMATCH: ${u.email} - legacy role='${u.role}', pero roleRel.name='${u.roleRel?.name}' (roleId=${u.roleId})`,
+        );
+        integrityPassed = false;
+      } else {
+        console.log(
+          `   ✅ ${u.email.padEnd(28)} role='${u.role}' → roleId=${u.roleId} (${u.roleRel?.name})`,
+        );
+      }
+    }
+
+    if (!integrityPassed) {
+      throw new Error(
+        '❌ Verificación de integridad de roles fallida. Revisa los datos.',
+      );
+    }
+    console.log('✅ Integridad verificada correctamente\n');
 
     console.log('╔════════════════════════════════════════════════╗');
     console.log('║     ✅ BASE DE DATOS RESETEADA EXITOSAMENTE    ║');
@@ -116,20 +153,24 @@ async function resetUsers() {
 
     console.log('📝 Credenciales de acceso:\n');
     console.log('ADMIN:');
-    console.log('  Email: admin@taskflow.com');
-    console.log('  Password: Admin123\n');
+    console.log('  Email:    admin@taskflow.com');
+    console.log('  Password: Admin123');
+    console.log('  Role:     admin (panel de administración)\n');
 
     console.log('MANAGER:');
-    console.log('  Email: manager@taskflow.com');
-    console.log('  Password: Manager123\n');
+    console.log('  Email:    manager@taskflow.com');
+    console.log('  Password: Manager123');
+    console.log('  Role:     manager (panel de administración)\n');
 
     console.log('USER 1:');
-    console.log('  Email: user@taskflow.com');
-    console.log('  Password: User123\n');
+    console.log('  Email:    user@taskflow.com');
+    console.log('  Password: User123');
+    console.log('  Role:     user (panel de usuario)\n');
 
     console.log('USER 2:');
-    console.log('  Email: user2@taskflow.com');
-    console.log('  Password: User123\n');
+    console.log('  Email:    user2@taskflow.com');
+    console.log('  Password: User123');
+    console.log('  Role:     user (panel de usuario)\n');
 
     await prisma.$disconnect();
     process.exit(0);
