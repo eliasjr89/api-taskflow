@@ -1,17 +1,22 @@
 // src/middleware/security.middleware.js
-import rateLimit from 'express-rate-limit';
-import hpp from 'hpp';
+import rateLimit from "express-rate-limit";
+import hpp from "hpp";
 
 // Rate Limiting
 export const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per `window` (here, per 15 minutes)
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  max:
+    process.env.NODE_ENV === "test"
+      ? 100000
+      : process.env.NODE_ENV === "development"
+        ? 50000
+        : 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     success: false,
     message:
-      'Too many requests from this IP, please try again after 15 minutes',
+      "Too many requests from this IP, please try again after 15 minutes",
   },
 });
 

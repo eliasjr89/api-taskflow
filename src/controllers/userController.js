@@ -4,6 +4,8 @@ import * as UserRepository from '../repositories/userRepository.js';
 import { catchAsync } from '../utils/catchAsync.js';
 import { AppError } from '../utils/AppError.js';
 import * as AuditService from '../services/auditService.js';
+import { getRedisClient } from '../lib/redis.js';
+import { logger } from '../utils/logger.js';
 
 // Para rutas de perfil autenticado
 export const getProfile = catchAsync(async (req, res) => {
@@ -73,11 +75,25 @@ export const uploadUserAvatar = catchAsync(async (req, res) => {
 
 // Para rutas de administración de usuarios
 export const getAllUsers = catchAsync(async (req, res) => {
-  const users = await UserRepository.findAll();
-  res.status(200).json({
+  const result = await UserRepository.findAll(req.query);
+  const responseData = {
     success: true,
-    data: users,
-  });
+    data: result.results,
+    pagination: result.pagination,
+  };
+
+  const redisClient = getRedisClient();
+  if (redisClient && redisClient.isOpen) {
+    try {
+      await redisClient.set(req.originalUrl, JSON.stringify(responseData), {
+        EX: 300,
+      });
+    } catch (err) {
+      logger.error('[Redis] Fallo guardando en Cache:', err);
+    }
+  }
+
+  res.status(200).json(responseData);
 });
 
 export const getUserById = catchAsync(async (req, res) => {

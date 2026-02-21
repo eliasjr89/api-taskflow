@@ -29,8 +29,19 @@ const transformTask = (task) => ({
       : [],
 });
 
-export const findAll = async () => {
+export const findAll = async (filters = {}) => {
+  const pageNum = Array.isArray(filters.page)
+    ? parseInt(filters.page[filters.page.length - 1])
+    : parseInt(filters.page) || 1;
+  const limitNum = Array.isArray(filters.limit)
+    ? parseInt(filters.limit[filters.limit.length - 1])
+    : parseInt(filters.limit) || 20;
+
+  const skip = (Math.max(1, pageNum) - 1) * Math.max(1, limitNum);
+
   const usersWithCounts = await prisma.user.findMany({
+    skip,
+    take: Number(limitNum),
     orderBy: { id: 'asc' },
     select: {
       id: true,
@@ -39,7 +50,7 @@ export const findAll = async () => {
       lastname: true,
       email: true,
       role: true,
-      profileImage: true,
+      // profileImage: true, => Excluido de `findAll()` por optimización de payloads masivos.
       createdAt: true,
       updatedAt: true,
       bio: true,
@@ -66,18 +77,27 @@ export const findAll = async () => {
     },
   });
 
-  // Map to snake_case and flatten relations
-  return usersWithCounts.map((u) => ({
-    ...u,
-    social_links: u.socialLinks,
-    profile_image: u.profileImage,
-    created_at: u.createdAt,
-    updated_at: u.updatedAt,
-    num_tasks: u._count?.tasks || 0,
-    num_projects: u._count?.projects || 0,
-    projects: u.projects.map((p) => p.project),
-    tasks: u.tasks.map((t) => t.task),
-  }));
+  const total = await prisma.user.count();
+
+  return {
+    results: usersWithCounts.map((u) => ({
+      ...u,
+      social_links: u.socialLinks,
+      // profile_image omitido intencionalmente
+      created_at: u.createdAt,
+      updated_at: u.updatedAt,
+      num_tasks: u._count?.tasks || 0,
+      num_projects: u._count?.projects || 0,
+      projects: u.projects.map((p) => p.project),
+      tasks: u.tasks.map((t) => t.task),
+    })),
+    pagination: {
+      total,
+      page: Number(pageNum),
+      limit: Math.max(1, Number(limitNum)),
+      totalPages: Math.ceil(total / Math.max(1, limitNum)),
+    },
+  };
 };
 
 export const findByEmail = async (email) => {

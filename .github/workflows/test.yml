@@ -1,0 +1,77 @@
+name: Test Suite
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: taskflow_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: "postgresql://user:password@localhost:5432/taskflow_test?schema=public"
+      JWT_SECRET: "super_secret_jwt_key_for_testing_purposes_only_do_not_use_in_production"
+      REDIS_URL: "redis://localhost:6379"
+      NODE_ENV: "test"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check Linting
+        run: npm run lint
+
+      - name: Setup Prisma & Database
+        run: |
+          npx prisma generate
+          npx prisma db push --accept-data-loss
+
+      - name: Seed Database
+        run: |
+          npm run db:reset
+          npm run db:seed
+
+      - name: Run Unit Tests
+        run: npm run test:unit
+        env:
+          NODE_OPTIONS: --experimental-vm-modules
+
+      - name: Run E2E Tests
+        run: npm run test:e2e
+        env:
+          NODE_OPTIONS: --experimental-vm-modules

@@ -1,15 +1,32 @@
-// src/controllers/projectController.js
 import * as ProjectService from '../services/projectService.js';
 import * as AuditService from '../services/auditService.js';
 import { catchAsync } from '../utils/catchAsync.js';
+import { getRedisClient } from '../lib/redis.js';
+import { logger } from '../utils/logger.js';
 
 export const getAllProjects = catchAsync(async (req, res) => {
-  const projects = await ProjectService.getAllProjects();
-  res.status(200).json({
+  const result = await ProjectService.getAllProjects(req.query);
+
+  const responseData = {
     success: true,
-    data: projects,
+    data: result.results,
+    pagination: result.pagination,
     message: 'Projects fetched successfully',
-  });
+  };
+
+  const redisClient = getRedisClient();
+
+  if (redisClient && redisClient.isOpen) {
+    try {
+      await redisClient.set(req.originalUrl, JSON.stringify(responseData), {
+        EX: 300,
+      });
+    } catch (err) {
+      logger.error('[Redis] Fallo guardando en Cache:', err);
+    }
+  }
+
+  res.status(200).json(responseData);
 });
 
 export const getProjectById = catchAsync(async (req, res) => {

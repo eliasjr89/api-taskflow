@@ -14,6 +14,15 @@ services:
     networks:
       - taskflow-network
 
+  # Cache Service
+  redis:
+    image: redis:7-alpine
+    container_name: taskflow-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - taskflow-network
+
   # Backend Service
   api:
     build:

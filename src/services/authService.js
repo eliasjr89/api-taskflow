@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import * as UserRepository from '../repositories/userRepository.js';
 import { AppError } from '../utils/AppError.js';
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
+import { prisma } from '../lib/prisma.js';
 
 const signToken = (id, role, sessionId) => {
   return jwt.sign({ userId: id, role, sessionId }, env.JWT_SECRET, {
@@ -37,7 +39,7 @@ export const login = async ({
     'user'
   ).toLowerCase();
 
-  console.log('🔍 RBAC Check:', {
+  logger.debug('🔍 RBAC Check:', {
     loginType,
     effectiveRole,
     legacyRole: user.role,
@@ -45,43 +47,49 @@ export const login = async ({
   });
 
   if (loginType === 'user' && effectiveRole !== 'user') {
-    console.log('❌ Role mismatch: Admin/Manager trying to use User form');
-    throw new AppError(
-      'This account is an administrator or manager account. Please use the Admin login form.',
-      403,
-    );
+    logger.warn('❌ Role mismatch: Admin/Manager trying to use User form');
+    throw new AppError('Admin/Manager cannot use the user login form', 403);
   }
 
   if (loginType === 'admin' && effectiveRole === 'user') {
-    console.log('❌ Role mismatch: User trying to use Admin form');
-    throw new AppError(
-      'This account is a regular user account. Please use the User login form.',
-      403,
-    );
+    logger.warn('❌ Role mismatch: User trying to use Admin form');
+    throw new AppError('Standard users cannot use the admin login form', 403);
   }
 
-  console.log('✅ Role validation passed');
+  logger.debug('✅ Role validation passed');
 
   // Self-Healing: Backfill roleId if missing (Transition to RBAC)
   if (!user.roleId) {
     try {
-      console.log(
-        `🔧 Backfilling missing roleId for user: ${user.email} (Role: ${user.role})`,
+      logger.info(
+        `🔄 Backfilling roleId for user ${user.id} with role ${user.role}`,
       );
-      const updatedRoleId = await UserRepository.syncLegacyRole(
-        user.id,
-        user.role,
-      );
-      if (updatedRoleId) {
-        user.roleId = updatedRoleId;
-        console.log('✅ Backfill successful');
+      // Find the target role ID based on the effective role
+      const targetRole = await prisma.role.findUnique({
+        where: { name: effectiveRole },
+        select: { id: true },
+      });
+
+      if (targetRole) {
+        const updated = await prisma.user.update({
+          where: { id: user.id },
+          data: { roleId: targetRole.id },
+        });
+        if (updated) {
+          user.roleId = targetRole.id; // Update user object in memory
+          logger.info('✅ Backfill successful');
+        }
       } else {
-        console.warn(
-          `⚠️ Could not find Role record for legacy role '${user.role}'`,
+        logger.warn(
+          `⚠️ Could not find Role record for effective role '${effectiveRole}'`,
         );
       }
     } catch (err) {
-      console.error('❌ Failed to backfill roleId:', err.message);
+      logger.error('❌ Failed to backfill roleId:', {
+        error: err.message,
+        userId: user.id,
+        effectiveRole,
+      });
       // Don't block login for this, just log error
     }
   }

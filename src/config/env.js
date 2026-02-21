@@ -1,6 +1,7 @@
 // src/config/env.js
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import { logger } from '../utils/logger.js';
 
 // Only load .env file in local development (not in Vercel)
 if (!process.env.VERCEL) {
@@ -60,7 +61,7 @@ const parseEnv = () => {
 
   if (!result.success) {
     const errorMsg = `❌ Invalid environment variables: ${JSON.stringify(result.error.format())}`;
-    console.error(errorMsg);
+    logger.error(errorMsg);
     throw new Error(errorMsg);
   }
 

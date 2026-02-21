@@ -1,6 +1,7 @@
 // src/services/announcementService.js
 import { prisma } from '../lib/prisma.js';
 import { getIO } from '../lib/socket.js';
+import { logger } from '../utils/logger.js';
 
 export const createAnnouncement = async (data, creatorId) => {
   const announcement = await prisma.announcement.create({
@@ -20,7 +21,7 @@ export const createAnnouncement = async (data, creatorId) => {
     const io = getIO();
     io.emit('announcement:new', announcement);
   } catch {
-    console.error('Socket not initialized, skipping broadcast');
+    logger.error('Socket not initialized, skipping broadcast');
   }
 
   return announcement;

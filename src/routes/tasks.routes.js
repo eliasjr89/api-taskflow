@@ -15,6 +15,10 @@ import {
 } from '../controllers/taskController.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import {
+  cacheMiddleware,
+  clearCacheMw,
+} from '../middleware/cache.middleware.js';
+import {
   validateBody,
   validateParams,
   validateQuery,
@@ -42,7 +46,12 @@ router.use(authMiddleware);
  *     summary: Obtener todas las tareas
  *     tags: [Tasks]
  */
-router.get('/', validateQuery(getTasksQuerySchema), getAllTasks);
+router.get(
+  '/',
+  validateQuery(getTasksQuerySchema),
+  cacheMiddleware(),
+  getAllTasks,
+);
 
 /**
  * @swagger
@@ -60,7 +69,13 @@ router.get('/:id', validateParams(getTaskSchema), getTaskById);
  *     summary: Crear una nueva tarea
  *     tags: [Tasks]
  */
-router.post('/', validateBody(createTaskSchema), createTask);
+router.post(
+  '/',
+  validateBody(createTaskSchema),
+  clearCacheMw('/taskflow/tasks*'),
+  clearCacheMw('/taskflow/projects*'),
+  createTask,
+);
 
 /**
  * @swagger
@@ -69,7 +84,13 @@ router.post('/', validateBody(createTaskSchema), createTask);
  *     summary: Actualizar tarea
  *     tags: [Tasks]
  */
-router.put('/:id', validateParams(updateTaskSchema), updateTask);
+router.put(
+  '/:id',
+  validateParams(updateTaskSchema),
+  clearCacheMw('/taskflow/tasks*'),
+  clearCacheMw('/taskflow/projects*'),
+  updateTask,
+);
 
 /**
  * @swagger
@@ -78,23 +99,43 @@ router.put('/:id', validateParams(updateTaskSchema), updateTask);
  *     summary: Eliminar tarea
  *     tags: [Tasks]
  */
-router.delete('/:id', validateParams(getTaskSchema), deleteTask);
+router.delete(
+  '/:id',
+  validateParams(getTaskSchema),
+  clearCacheMw('/taskflow/tasks*'),
+  clearCacheMw('/taskflow/projects*'),
+  deleteTask,
+);
 
 // Task Users
 router.get('/:id/users', validateParams(getTaskSchema), getTaskUsers);
-router.post('/:id/users', validateBody(addUsersToTaskSchema), addUsersToTask);
+router.post(
+  '/:id/users',
+  validateBody(addUsersToTaskSchema),
+  clearCacheMw('/taskflow/tasks*'),
+  clearCacheMw('/taskflow/projects*'),
+  addUsersToTask,
+);
 router.delete(
   '/:id/users/:userId',
   validateParams(removeUserFromTaskSchema),
+  clearCacheMw('/taskflow/tasks*'),
+  clearCacheMw('/taskflow/projects*'),
   removeUserFromTask,
 );
 
 // Task Tags
 router.get('/:id/tags', validateParams(getTaskSchema), getTaskTags);
-router.post('/:id/tags', validateBody(addTagsToTaskSchema), addTagsToTask);
+router.post(
+  '/:id/tags',
+  validateBody(addTagsToTaskSchema),
+  clearCacheMw('/taskflow/tasks*'),
+  addTagsToTask,
+);
 router.delete(
   '/:id/tags/:tagId',
   validateParams(removeTagFromTaskSchema),
+  clearCacheMw('/taskflow/tasks*'),
   removeTagFromTask,
 );
 

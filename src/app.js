@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import announcementRoutes from './routes/announcement.routes.js';
 import { globalErrorHandler } from './middleware/error.middleware.js';
+import { logger } from './utils/logger.js';
 import { AppError } from './utils/AppError.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
@@ -25,9 +26,12 @@ const app = express();
 
 // REQUEST LOGGING for Vercel debugging
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  logger.info(`${req.method} ${req.url}`);
   next();
 });
+
+// Security
+app.use(limiter);
 
 /* ───────────── Middlewares globales ───────────── */
 // Trust proxy is required for Vercel/Heroku/etc to get correct IP
@@ -83,12 +87,10 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.get('/ping', (req, res) => res.send('pong'));
-
-// Security
-// Security
-app.use(limiter);
+// Protect against Parameter Pollution after body/query is parsed
 app.use(hppMiddleware);
+
+app.get('/ping', (req, res) => res.send('pong'));
 
 /* ───────────── Rutas API ───────────── */
 app.use('/taskflow/users', usersRoutes);

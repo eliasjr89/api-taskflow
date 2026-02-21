@@ -8,6 +8,10 @@ import {
   deleteUser,
 } from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import {
+  cacheMiddleware,
+  clearCacheMw,
+} from '../middleware/cache.middleware.js';
 import { uploadAvatar } from '../middleware/upload.middleware.js';
 import {
   validateBody,
@@ -38,7 +42,7 @@ router.use(authMiddleware);
  *     summary: Obtener todos los usuarios
  *     tags: [Users]
  */
-router.get('/', getAllUsers);
+router.get('/', cacheMiddleware(), getAllUsers);
 
 /**
  * @swagger
@@ -60,6 +64,8 @@ router.post(
   '/',
   uploadAvatar.single('profile_image'),
   validateBody(createUserSchema),
+  clearCacheMw('/taskflow/users*'),
+  clearCacheMw('/taskflow/projects*'),
   createUser,
 );
 
@@ -73,8 +79,9 @@ router.post(
 router.put(
   '/:id',
   uploadAvatar.single('profile_image'),
-  validateParams(getUserSchema),
   validateBody(updateUserSchema),
+  clearCacheMw('/taskflow/users*'),
+  clearCacheMw('/taskflow/projects*'),
   updateUser,
 );
 
@@ -85,6 +92,12 @@ router.put(
  *     summary: Eliminar usuario
  *     tags: [Users]
  */
-router.delete('/:id', validateParams(getUserSchema), deleteUser);
+router.delete(
+  '/:id',
+  validateParams(getUserSchema),
+  clearCacheMw('/taskflow/users*'),
+  clearCacheMw('/taskflow/projects*'),
+  deleteUser,
+);
 
 export default router;

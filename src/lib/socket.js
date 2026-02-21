@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import { logger } from '../utils/logger.js';
 
 let io;
 
@@ -75,7 +76,7 @@ export const initSocket = (server) => {
     });
 
     socket.on('disconnect', () => {
-      console.log(`❌ Cliente desconectado: ${socket.id}`);
+      logger.info(`❌ Cliente desconectado: ${socket.id}`);
       // Notify Admins
       io.to('admin-room').emit('admin:session-disconnected', {
         userId: socket.user.userId,
@@ -99,12 +100,12 @@ export const initSocket = (server) => {
             const health = await AdminService.getSystemHealth();
             io.to('admin-room').emit('admin:system-health', health);
           } catch (err) {
-            console.error('Error emitting health stats:', err.message);
+            logger.error('Error emitting health stats:', err.message);
           }
         }
       }, 5000);
     } catch (err) {
-      console.error(
+      logger.error(
         'Failed to import AdminService for socket health stats',
         err,
       );

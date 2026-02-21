@@ -1,6 +1,9 @@
 // src/db/database.js
 import pg from 'pg';
 import { env } from '../config/env.js';
+import { prisma } from '../lib/prisma.js';
+import { logger } from '../utils/logger.js';
+import dotenv from 'dotenv';
 
 // Only disable TLS validation in local development, not in Vercel
 if (env.NODE_ENV === 'development' && !process.env.VERCEL) {
@@ -23,7 +26,7 @@ let connectionString =
 // This avoids SSL certificate issues with Supabase pooler
 if (process.env.VERCEL && connectionString) {
   if (connectionString.includes(':6543/')) {
-    console.log(
+    logger.info(
       '🔧 Vercel detected: Switching from pooler (6543) to direct connection (5432)',
     );
     connectionString = connectionString.replace(':6543/', ':5432/');
@@ -36,7 +39,7 @@ if (process.env.VERCEL && connectionString) {
 
   // CRITICAL: Remove sslmode parameter - it overrides our custom SSL config
   connectionString = connectionString.replace(/[?&]sslmode=\w+/g, '');
-  console.log('🔧 Removed sslmode parameter to use custom SSL config');
+  logger.info('🔧 Removed sslmode parameter to use custom SSL config');
 }
 
 const poolConfig = {
@@ -49,9 +52,12 @@ if (connectionString) {
   poolConfig.connectionString = connectionString;
 
   // SSL configuration for cloud providers (Supabase, Neon, etc.)
-  if (env.NODE_ENV === 'development' && !process.env.VERCEL) {
+  if (
+    (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') &&
+    !process.env.VERCEL
+  ) {
     poolConfig.ssl = false;
-    console.log('🔒 SSL Disabled for local development');
+    logger.info('🔒 SSL Disabled for local development/test');
   } else {
     // Supabase uses certificates that Node.js v22+ considers self-signed
     poolConfig.ssl = {
@@ -59,7 +65,7 @@ if (connectionString) {
       checkServerIdentity: () => undefined,
       secureOptions: 0, // Disable all SSL verification
     };
-    console.log('🔒 SSL Config applied:', { rejectUnauthorized: false });
+    logger.info('🔒 SSL Config applied:', { rejectUnauthorized: false });
   }
 } else {
   poolConfig.host = env.DB_HOST;
@@ -74,17 +80,16 @@ if (connectionString) {
 
 export const pool = new Pool(poolConfig);
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+pool.on('error', (err, client) => {
+  logger.error('Unexpected error on idle client', err);
 });
 
-export const connectDB = async () => {
+export const testConnection = async () => {
   try {
     const client = await pool.connect();
-    console.log('Database connected');
+    logger.info('Database connected');
     client.release();
   } catch (error) {
-    console.error('Database connection error:', error);
-    throw error;
+    logger.error('Database connection error:', error);
   }
 };

@@ -3,6 +3,8 @@ import * as TaskService from '../services/taskService.js';
 import * as AuditService from '../services/auditService.js';
 import { catchAsync } from '../utils/catchAsync.js';
 import { getIO } from '../lib/socket.js';
+import { getRedisClient } from '../lib/redis.js';
+import { logger } from '../utils/logger.js';
 
 export const getAllTasks = catchAsync(async (req, res) => {
   const filters = { ...req.query };
@@ -13,12 +15,25 @@ export const getAllTasks = catchAsync(async (req, res) => {
   }
 
   const result = await TaskService.getAllTasks(filters);
-  res.status(200).json({
+  const responseData = {
     success: true,
     message: 'Tasks fetched successfully',
     data: result.results,
     pagination: result.pagination,
-  });
+  };
+
+  const redisClient = getRedisClient();
+  if (redisClient && redisClient.isOpen) {
+    try {
+      await redisClient.set(req.originalUrl, JSON.stringify(responseData), {
+        EX: 300,
+      });
+    } catch (err) {
+      logger.error('[Redis] Fallo guardando en Cache:', err);
+    }
+  }
+
+  res.status(200).json(responseData);
 });
 
 export const getTaskById = catchAsync(async (req, res) => {

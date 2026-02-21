@@ -1,5 +1,6 @@
 // src/middleware/maintenance.middleware.js
 import { prisma } from '../lib/prisma.js';
+import { logger } from '../utils/logger.js';
 
 // Cache for maintenance mode setting
 let maintenanceCache = {
@@ -63,7 +64,7 @@ export const checkMaintenanceMode = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Maintenance middleware error:', error);
+    logger.error('Maintenance middleware error:', error);
     // On error, allow request to proceed (fail open)
     next();
   }

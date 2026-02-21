@@ -7,7 +7,9 @@ export const createProjectSchema = z.object({
     description: z.string().optional(),
     color: z.string().optional(),
     icon: z.string().optional(),
-    user_ids: z.array(z.number().int()).optional(),
+    user_ids: z
+      .array(z.number().int().positive('User IDs must be positive integers'))
+      .optional(),
   }),
 });
 
@@ -20,7 +22,9 @@ export const updateProjectSchema = z.object({
     description: z.string().optional(),
     color: z.string().optional(),
     icon: z.string().optional(),
-    user_ids: z.array(z.number().int()).optional(),
+    user_ids: z
+      .array(z.number().int().positive('User IDs must be positive integers'))
+      .optional(),
   }),
 });
 
@@ -36,7 +40,7 @@ export const addUsersToProjectSchema = z.object({
   }),
   body: z.object({
     user_ids: z
-      .array(z.number().int())
+      .array(z.number().int().positive('User IDs must be positive integers'))
       .min(1, 'At least one user_id is required'),
   }),
 });

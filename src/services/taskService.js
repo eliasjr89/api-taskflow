@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma.js';
 import * as TaskRepository from '../repositories/taskRepository.js';
 import * as WebhookService from '../services/webhookService.js';
 import { AppError } from '../utils/AppError.js';
+import { logger } from '../utils/logger.js';
 
 export const getAllTasks = async (filters = {}) => {
   // ... existing getAllTasks
@@ -81,7 +82,7 @@ export const createTask = async (taskData) => {
 
   // Trigger Webhook (async, don't block)
   WebhookService.trigger('task.created', finalTask).catch((err) =>
-    console.error('Webhook trigger failed', err.message),
+    logger.error('Webhook trigger failed', { error: err.message }),
   );
 
   return finalTask;
@@ -145,7 +146,7 @@ export const updateTask = async (taskId, taskData) => {
 
   // Trigger Webhook
   WebhookService.trigger('task.updated', finalTask).catch((err) =>
-    console.error('Webhook trigger failed', err.message),
+    logger.error('Webhook trigger failed', { error: err.message }),
   );
 
   return finalTask;

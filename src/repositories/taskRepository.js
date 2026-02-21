@@ -28,6 +28,13 @@ export const findAll = async ({
   limit,
   offset,
 }) => {
+  const limitNum = Array.isArray(limit)
+    ? parseInt(limit[limit.length - 1])
+    : parseInt(limit);
+  const offsetNum = Array.isArray(offset)
+    ? parseInt(offset[offset.length - 1])
+    : parseInt(offset);
+
   const where = {
     deleted: false,
   };
@@ -75,8 +82,8 @@ export const findAll = async ({
       },
     },
     orderBy: { id: 'asc' },
-    skip: offset ? Number(offset) : undefined,
-    take: limit ? Number(limit) : undefined,
+    skip: offsetNum ? Number(offsetNum) : undefined,
+    take: limitNum ? Number(limitNum) : undefined,
   });
 
   const total = await prisma.task.count({ where });

@@ -3,8 +3,8 @@ import { prisma } from '../lib/prisma.js';
 import * as ProjectRepository from '../repositories/projectRepository.js';
 import { AppError } from '../utils/AppError.js';
 
-export const getAllProjects = async () => {
-  return await ProjectRepository.findAll();
+export const getAllProjects = async (filters = {}) => {
+  return await ProjectRepository.findAll(filters);
 };
 
 export const getProjectById = async (id) => {

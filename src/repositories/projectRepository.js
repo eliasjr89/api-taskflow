@@ -26,8 +26,19 @@ const transformProject = (project) => ({
     })) || [],
 });
 
-export const findAll = async () => {
+export const findAll = async (filters = {}) => {
+  const pageNum = Array.isArray(filters.page)
+    ? parseInt(filters.page[filters.page.length - 1])
+    : parseInt(filters.page) || 1;
+  const limitNum = Array.isArray(filters.limit)
+    ? parseInt(filters.limit[filters.limit.length - 1])
+    : parseInt(filters.limit) || 20;
+
+  const skip = (Math.max(1, pageNum) - 1) * Math.max(1, limitNum);
+
   const projects = await prisma.project.findMany({
+    skip,
+    take: Number(limitNum),
     include: {
       creator: true,
       users: {
@@ -38,7 +49,7 @@ export const findAll = async () => {
               username: true,
               name: true,
               lastname: true,
-              profileImage: true,
+              // profileImage: true, => Excluido por optimización de rendimiento B64
             },
           },
         },
@@ -49,7 +60,18 @@ export const findAll = async () => {
     },
     orderBy: { createdAt: 'desc' },
   });
-  return projects.map(transformProject);
+
+  const total = await prisma.project.count();
+
+  return {
+    results: projects.map(transformProject),
+    pagination: {
+      total,
+      page: Number(pageNum),
+      limit: Math.max(1, Number(limitNum)),
+      totalPages: Math.ceil(total / Math.max(1, limitNum)),
+    },
+  };
 };
 
 export const findById = async (id, tx = prisma) => {

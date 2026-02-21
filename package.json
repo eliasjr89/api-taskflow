@@ -12,6 +12,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest src/tests/unit",
+    "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest src/e2e",
     "build": "echo 'No build necessary for Node.js backend'",
     "postinstall": "prisma generate"
   },
@@ -22,6 +24,7 @@
   "type": "module",
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "autocannon": "^8.0.0",
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
@@ -36,9 +39,11 @@
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "pg": "^8.16.3",
+    "redis": "^5.11.0",
     "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {

@@ -24,6 +24,10 @@ import {
   addUsersToProjectSchema,
   removeUserFromProjectSchema,
 } from '../schemas/project.schema.js';
+import {
+  cacheMiddleware,
+  clearCacheMw,
+} from '../middleware/cache.middleware.js';
 
 const router = Router();
 
@@ -46,7 +50,7 @@ router.use(authMiddleware);
  *       200:
  *         description: Lista de proyectos
  */
-router.get('/', getAllProjects);
+router.get('/', cacheMiddleware(), getAllProjects); // Caché Interceptador
 
 /**
  * @swagger
@@ -113,7 +117,12 @@ router.get('/:id', validateParams(getProjectSchema), getProjectById);
  *       201:
  *         description: Proyecto creado
  */
-router.post('/', validateBody(createProjectSchema), createProject);
+router.post(
+  '/',
+  validateBody(createProjectSchema),
+  clearCacheMw('/taskflow/projects*'),
+  createProject,
+);
 
 /**
  * @swagger
@@ -141,7 +150,12 @@ router.post('/', validateBody(createProjectSchema), createProject);
  *       200:
  *         description: Proyecto actualizado
  */
-router.put('/:id', validateParams(updateProjectSchema), updateProject);
+router.put(
+  '/:id',
+  validateParams(updateProjectSchema),
+  clearCacheMw('/taskflow/projects*'),
+  updateProject,
+);
 
 /**
  * @swagger
@@ -159,7 +173,12 @@ router.put('/:id', validateParams(updateProjectSchema), updateProject);
  *       200:
  *         description: Proyecto eliminado
  */
-router.delete('/:id', validateParams(getProjectSchema), deleteProject);
+router.delete(
+  '/:id',
+  validateParams(getProjectSchema),
+  clearCacheMw('/taskflow/projects*'),
+  deleteProject,
+);
 
 // Project Members
 router.get('/:id/users', validateParams(getProjectSchema), getProjectUsers);

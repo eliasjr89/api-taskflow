@@ -20,9 +20,17 @@ export const validate = (schema, _property = 'body') => {
       const result = schema.safeParse(requestData);
 
       if (!result.success) {
-        const message = result.error.errors
-          .map((err) => `${err.path.join('.')}: ${err.message}`)
-          .join(', ');
+        let message = 'Validation Error';
+        if (result.error && typeof result.error.flatten === 'function') {
+          const fieldErrors = result.error.flatten().fieldErrors;
+          message = Object.entries(fieldErrors)
+            .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+            .join(' | ');
+        } else if (result.error && Array.isArray(result.error.errors)) {
+          message = result.error.errors
+            .map((err) => `${err.path.join('.')}: ${err.message}`)
+            .join(', ');
+        }
         return next(new AppError(message, 400));
       }
 

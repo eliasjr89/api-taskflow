@@ -1,6 +1,7 @@
 // src/services/webhookService.js
 import { prisma } from '../lib/prisma.js';
 import axios from 'axios';
+import { logger } from '../utils/logger.js';
 
 export const createWebhook = async (data) => {
   return await prisma.webhook.create({
@@ -39,27 +40,35 @@ export const trigger = async (event, payload) => {
   }
 
   // Dispatch in background
-  webhooks.forEach(async (webhook) => {
-    try {
-      await axios.post(
-        webhook.url,
-        {
-          event,
-          payload,
-          timestamp: new Date(),
-        },
-        {
-          headers: {
-            'X-Webhook-Secret': webhook.secret || '',
-            'Content-Type': 'application/json',
-          },
-          timeout: 5000,
-        },
-      );
-      // console.log(`Webhook ${webhook.id} triggered for ${event}`);
-    } catch (error) {
-      console.error(`Webhook ${webhook.id} failed:`, error.message);
-      // Logic to disable webhook after N failures?
-    }
-  });
+  try {
+    await Promise.all(
+      webhooks.map(async (webhook) => {
+        try {
+          await axios.post(
+            webhook.url,
+            {
+              event,
+              payload,
+              timestamp: new Date(),
+            },
+            {
+              headers: {
+                'X-Webhook-Secret': webhook.secret || '',
+                'Content-Type': 'application/json',
+              },
+              timeout: 5000,
+            },
+          );
+          logger.debug(`Webhook ${webhook.id} triggered for ${event}`);
+        } catch (error) {
+          logger.error(`Webhook ${webhook.id} failed:`, {
+            error: error.message,
+          });
+          // Logic to disable webhook after N failures?
+        }
+      }),
+    );
+  } catch (error) {
+    logger.error('Error in Webhook trigger:', { error: error.message });
+  }
 };

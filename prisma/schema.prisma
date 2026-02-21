@@ -35,6 +35,7 @@ model User {
   roleRel         Role?    @relation(fields: [roleId], references: [id])
 
   @@map("users")
+  @@index([roleId])
 }
 
 model Project {
@@ -52,6 +53,7 @@ model Project {
   tasks   Task[]
 
   @@map("projects")
+  @@index([creatorId])
 }
 
 model ProjectsOnUsers {
@@ -63,6 +65,8 @@ model ProjectsOnUsers {
 
   @@id([projectId, userId])
   @@map("projects_users")
+  @@index([userId])
+  @@index([projectId])
 }
 
 model Task {
@@ -83,6 +87,9 @@ model Task {
   tags    TasksOnTags[]
 
   @@map("tasks")
+  @@index([projectId])
+  @@index([statusId])
+  @@index([deleted])
 }
 
 model TasksOnUsers {
@@ -94,6 +101,8 @@ model TasksOnUsers {
 
   @@id([taskId, userId])
   @@map("tasks_users")
+  @@index([userId])
+  @@index([taskId])
 }
 
 model Tag {
@@ -117,6 +126,8 @@ model TasksOnTags {
 
   @@id([taskId, tagId])
   @@map("tasks_tags")
+  @@index([tagId])
+  @@index([taskId])
 }
 
 model TaskStatus {
@@ -143,6 +154,8 @@ model AuditLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+  @@index([userId])
+  @@index([entityType, entityId])
 }
 
 // --- NEW ADMIN FEATURES MODELS ---
@@ -208,6 +221,7 @@ model ActiveSession {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("active_sessions")
+  @@index([userId])
 }
 
 model Webhook {

@@ -2,6 +2,7 @@
 import * as AuthService from '../services/authService.js';
 import * as AuditService from '../services/auditService.js';
 import { catchAsync } from '../utils/catchAsync.js';
+import { logger } from '../utils/logger.js';
 import { AppError } from '../utils/AppError.js';
 
 export const login = catchAsync(async (req, res, next) => {
@@ -45,8 +46,8 @@ export const login = catchAsync(async (req, res, next) => {
       data: { token, user },
     });
   } catch (error) {
-    console.error('❌ Login failed in Service:', error.message);
-    return next(error);
+    logger.error('❌ Login failed in Service:', { error: error.message });
+    throw error;
   }
 });
 

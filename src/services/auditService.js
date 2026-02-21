@@ -1,5 +1,6 @@
 // src/services/auditService.js
 import { prisma } from '../lib/prisma.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Log an activity to the audit_logs table.
@@ -35,7 +36,7 @@ export const logAction = async ({
       },
     });
   } catch (error) {
-    console.error('FAILED TO LOG AUDIT:', error);
+    logger.error('FAILED TO LOG AUDIT:', error);
     // Don't throw, we don't want to break the main flow if logging fails
   }
 };
