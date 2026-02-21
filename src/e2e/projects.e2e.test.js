@@ -1,10 +1,13 @@
 import { apiClient, setupTestDB } from './setup.js';
+import { prisma } from '../lib/prisma.js';
 
 describe('E2E Projects API', () => {
   setupTestDB();
 
   let adminToken = '';
   let projectId = null;
+  let managerUserId = null;
+  let userUserId = null;
   // Utilizaremos un admin fijo si la DB ya esta poblada o lo creamos al vuelo.
 
   beforeAll(async () => {
@@ -18,6 +21,14 @@ describe('E2E Projects API', () => {
       console.error('LOGIN FAILED IN PROJECTS:', loginRes.body);
     }
     adminToken = loginRes.body.data.token;
+
+    // 2. Obtener IDs dinámicos de manager y user desde la BD
+    const manager = await prisma.user.findUnique({
+      where: { username: 'manager' },
+    });
+    const user = await prisma.user.findUnique({ where: { username: 'user' } });
+    managerUserId = manager?.id;
+    userUserId = user?.id;
   });
 
   describe('GET /taskflow/projects', () => {
@@ -39,12 +50,11 @@ describe('E2E Projects API', () => {
 
   describe('POST /taskflow/projects', () => {
     it('Debe crear un nuevo proyecto exitosamente', async () => {
+      const userIds = [managerUserId, userUserId].filter(Boolean);
       const payload = {
         name: 'E2E Test Project',
         description: 'Testing endpoints in Jest',
-        start_date: new Date().toISOString(),
-        end_date: new Date(Date.now() + 86400000).toISOString(),
-        user_ids: [2, 3], // Manager y User 1
+        ...(userIds.length > 0 && { user_ids: userIds }),
       };
 
       const res = await apiClient

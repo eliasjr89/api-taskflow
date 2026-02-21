@@ -1,4 +1,5 @@
 import { apiClient, setupTestDB } from './setup.js';
+import { prisma } from '../lib/prisma.js';
 
 describe('E2E Tasks API', () => {
   setupTestDB();
@@ -6,6 +7,7 @@ describe('E2E Tasks API', () => {
   let adminToken = '';
   let projectId = null;
   let taskId = null;
+  let statusId = null;
 
   beforeAll(async () => {
     // 1. Obtener Token de Admin
@@ -17,6 +19,25 @@ describe('E2E Tasks API', () => {
     }
     adminToken = loginRes.body.data.token;
 
+    // Asegurar que existan estados de tarea (pueden no existir tras db:reset)
+    const statusCount = await prisma.taskStatus.count();
+    if (statusCount === 0) {
+      await prisma.taskStatus.createMany({
+        data: [
+          { name: 'pending' },
+          { name: 'in_progress' },
+          { name: 'completed' },
+          { name: 'cancelled' },
+        ],
+      });
+    }
+
+    // Obtener el primer status disponible de la BD (dinámico)
+    const firstStatus = await prisma.taskStatus.findFirst({
+      orderBy: { id: 'asc' },
+    });
+    statusId = firstStatus?.id;
+
     // Crear un proyecto de prueba para asignar la tarea
     const projRes = await apiClient
       .post('/taskflow/projects')
@@ -26,8 +47,8 @@ describe('E2E Tasks API', () => {
         description: 'For Task testing',
       });
 
-    // Si no crea el proyecto es porque ya habiamos sembrado/testeado
-    projectId = projRes.body?.data?.id || 1;
+    // El projectId viene del proyecto creado; no usar fallback a IDs inexistentes
+    projectId = projRes.body?.data?.id ?? null;
   });
 
   describe('POST /taskflow/tasks', () => {
@@ -35,7 +56,7 @@ describe('E2E Tasks API', () => {
       const payload = {
         description: 'E2E Test Task',
         priority: 'high',
-        status_id: 1, // 'pending'
+        status_id: statusId, // dinámico, primer estado disponible
         project_id: projectId,
       };
 
