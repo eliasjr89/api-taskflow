@@ -43,13 +43,6 @@ const initializeDB = async () => {
 // Vercel serverless function handler
 export default async (req, res) => {
   try {
-    // Optimization: Skip DB connection for Options requests (CORS preflight)
-    // This makes preflight checks much faster and cleaner
-    if (req.method === "OPTIONS") {
-      res.status(200).end();
-      return;
-    }
-
     // Ensure DB is connected before handling requests
     await initializeDB();
 
